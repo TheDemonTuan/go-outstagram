@@ -37,27 +37,29 @@ func AuthLogin(c *fiber.Ctx) error {
 
 	var userEntity entity.User
 
-	db := common.DBConn.Where(" username = ?", bodyData.Username)
+	db := common.DBConn.Where("username = ? or email = ? or phone = ?", bodyData.Username)
 
 	if err := db.First(&userEntity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid credentials")
 		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Internal server error")
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(bodyData.Password)); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid password")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid credentials")
 	}
 
-	token, tokenIsErr := createJWT(userEntity.UserId)
+	token, tokenIsErr := createJWT(userEntity.ID)
 	if tokenIsErr != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, tokenIsErr.Error())
 	}
 
 	c.Set("TDT-Auth-Token", token)
 
-	return c.Status(fiber.StatusOK).JSON(common.NewResponse(fiber.StatusOK, "Login successfully", nil))
+	return c.Status(fiber.StatusOK).JSON(common.NewResponse(fiber.StatusOK, "Login successfully", fiber.Map{
+		"token": token,
+	}))
 }
 
 func AuthRegister(c *fiber.Ctx) error {
@@ -80,10 +82,10 @@ func AuthRegister(c *fiber.Ctx) error {
 	}
 
 	newUser := entity.User{
-		UserId:   uuid.New(),
+		ID:       uuid.New(),
 		Username: bodyData.Username,
 		Password: string(hashedPassword),
-		Name:     bodyData.Name,
+		FullName: bodyData.FullName,
 		Email:    bodyData.Email,
 		Phone:    bodyData.Phone,
 		Birthday: bodyData.Birthday,
@@ -93,14 +95,17 @@ func AuthRegister(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while creating user")
 	}
 
-	token, tokenIsErr := createJWT(newUser.UserId)
+	token, tokenIsErr := createJWT(newUser.ID)
 
 	if tokenIsErr != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while creating token")
 	}
 
 	c.Set("TDT-Auth-Token", token)
-	return c.Status(fiber.StatusCreated).JSON(common.NewResponse(fiber.StatusOK, "Register successfully", newUser))
+
+	return c.Status(fiber.StatusCreated).JSON(common.NewResponse(fiber.StatusOK, "Register successfully", fiber.Map{
+		"token": token,
+	}))
 }
 
 func AuthVerify(c *fiber.Ctx) error {
@@ -110,7 +115,7 @@ func AuthVerify(c *fiber.Ctx) error {
 	}
 
 	userEntity := entity.User{}
-	if err := common.DBConn.First(&userEntity, "user_id = ?", currentUserID).Error; err != nil {
+	if err := common.DBConn.First(&userEntity, "id = ?", currentUserID).Error; err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "User not found")
