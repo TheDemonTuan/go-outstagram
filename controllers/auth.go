@@ -1,132 +1,80 @@
 package controllers
 
 import (
-	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 	"outstagram/common"
-	"outstagram/models/entity"
 	"outstagram/models/req"
-	"time"
+	"outstagram/services"
 )
 
-func createJWT(userId uuid.UUID) (string, error) {
-	claims := jwt.MapClaims{
-		"uuid": userId.String(),
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenSigned, tokenSignedErr := token.SignedString([]byte("secret"))
-	if tokenSignedErr != nil {
-		return "", errors.New("error while signing token")
-	}
-
-	return tokenSigned, nil
+type AuthController struct {
+	authService *services.AuthService
 }
 
-func AuthLogin(c *fiber.Ctx) error {
-	bodyData, err := common.Validator[req.AuthLogin](c)
+func NewAuthController(authService *services.AuthService) *AuthController {
+	return &AuthController{
+		authService: authService,
+	}
+}
 
-	if err != nil || bodyData == nil {
+func (c *AuthController) AuthLogin(ctx *fiber.Ctx) error {
+	bodyData, err := common.Validator[req.AuthLogin](ctx)
+	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	var userEntity entity.User
-
-	db := common.DBConn.Where("username = ? or email = ? or phone = ?", bodyData.Username, bodyData.Username, bodyData.Username)
-
-	if err := db.First(&userEntity).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid credentials")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(bodyData.Password)); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid credentials")
-	}
-
-	token, tokenIsErr := createJWT(userEntity.ID)
-	if tokenIsErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, tokenIsErr.Error())
-	}
-
-	c.Set("TDT-Auth-Token", token)
-
-	return c.Status(fiber.StatusOK).JSON(common.NewResponse(fiber.StatusOK, "Login successfully", fiber.Map{
-		"token": token,
-	}))
-}
-
-func AuthRegister(c *fiber.Ctx) error {
-	bodyData, err := common.Validator[req.AuthRegister](c)
-
-	if err != nil || bodyData == nil {
+	userEntity, err := c.authService.AuthenticateUser(bodyData.Username, bodyData.Password)
+	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	var userEntity entity.User
-
-	if err := common.DBConn.First(&userEntity, "email = ? OR username = ? OR phone = ?", bodyData.Email, bodyData.Username, bodyData.Phone).Error; err == nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Email, username or phone number already exists")
+	token, err := c.authService.CreateJWT(userEntity.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(bodyData.Password), bcrypt.DefaultCost)
+	ctx.Set("TDT-Auth-Token", token)
 
-	if hashedPasswordErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while hashing password")
-	}
-
-	newUser := entity.User{
-		ID:       uuid.New(),
-		Username: bodyData.Username,
-		Password: string(hashedPassword),
-		FullName: bodyData.FullName,
-		Email:    bodyData.Email,
-		Phone:    bodyData.Phone,
-		Birthday: bodyData.Birthday,
-	}
-
-	if err := common.DBConn.Create(&newUser).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while creating user")
-	}
-
-	token, tokenIsErr := createJWT(newUser.ID)
-
-	if tokenIsErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while creating token")
-	}
-
-	c.Set("TDT-Auth-Token", token)
-
-	return c.Status(fiber.StatusCreated).JSON(common.NewResponse(fiber.StatusOK, "Register successfully", fiber.Map{
+	return common.CreateResponse(ctx, fiber.StatusOK, "Login successfully", fiber.Map{
 		"token": token,
-	}))
+	})
 }
 
-func AuthVerify(c *fiber.Ctx) error {
-	currentUserID, currenUserIdIsOk := c.Locals("currentUserId").(string)
+func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
+	bodyData, err := common.Validator[req.AuthRegister](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	newUser, err := c.authService.CreateUser(bodyData)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	token, err := c.authService.CreateJWT(newUser.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	ctx.Set("TDT-Auth-Token", token)
+
+	return common.CreateResponse(ctx, fiber.StatusCreated, "Register successfully", fiber.Map{
+		"token": token,
+	})
+}
+
+func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
+	currentUserID, currenUserIdIsOk := ctx.Locals("currentUserId").(string)
 	if !currenUserIdIsOk {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
 
-	userEntity := entity.User{}
-	if err := common.DBConn.First(&userEntity, "id = ?", currentUserID).Error; err != nil {
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusNotFound, "User not found")
-		}
-
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	user, err := c.authService.VerifyUser(currentUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
 
-	return c.JSON(common.NewResponse(
-		fiber.StatusOK,
-		"Verify successfully",
-		userEntity),
-	)
+	return common.CreateResponse(ctx, fiber.StatusOK, "User is verified", fiber.Map{
+		"user": user,
+	})
 }
