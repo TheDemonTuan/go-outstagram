@@ -37,7 +37,7 @@ func AuthLogin(c *fiber.Ctx) error {
 
 	var userEntity entity.User
 
-	db := common.DBConn.Where("username = ? or email = ? or phone = ?", bodyData.Username)
+	db := common.DBConn.Where("username = ? or email = ? or phone = ?", bodyData.Username, bodyData.Username, bodyData.Username)
 
 	if err := db.First(&userEntity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -126,7 +126,7 @@ func AuthVerify(c *fiber.Ctx) error {
 
 	return c.JSON(common.NewResponse(
 		fiber.StatusOK,
-		"Success",
+		"Verify successfully",
 		userEntity),
 	)
 }

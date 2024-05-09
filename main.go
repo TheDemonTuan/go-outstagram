@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"os"
 	"outstagram/common"
-	"outstagram/router"
+	"outstagram/routes"
 )
 
 func init() {
@@ -56,7 +56,7 @@ func main() {
 		app.Use(logger.New())
 	}
 
-	router.SetupRouter(app)
+	routes.SetupRouter(app)
 	err := app.Listen(":" + os.Getenv("PORT"))
 	if err != nil {
 		panic(err)
