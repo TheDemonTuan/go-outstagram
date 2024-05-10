@@ -35,10 +35,10 @@ func main() {
 			if errors.As(err, &e) {
 				code = e.Code
 			}
-			return c.Status(code).JSON(common.NewResponse(
+			return common.CreateResponse(c,
 				code,
 				err.Error(),
-				nil))
+				nil)
 		},
 	})
 
