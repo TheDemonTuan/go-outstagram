@@ -17,7 +17,7 @@ import (
 func init() {
 	common.LoadEnvVar()
 	common.ConnectDB()
-	//common.CreateStaticFolder("static")
+	common.CreateStaticFolder(os.Getenv("STATIC_PATH"))
 }
 
 func main() {
@@ -55,6 +55,7 @@ func main() {
 	if os.Getenv("APP_ENV") == "development" {
 		app.Use(logger.New())
 	}
+	app.Static("/", "./"+os.Getenv("STATIC_PATH"))
 
 	routes.SetupRouter(app)
 	err := app.Listen(":" + os.Getenv("PORT"))

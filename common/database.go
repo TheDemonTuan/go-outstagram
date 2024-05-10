@@ -32,10 +32,10 @@ func ConnectDB() {
 
 func runMigrate() {
 	if os.Getenv("APP_ENV") == "development" {
-		//if err := DBConn.Migrator().DropTable(&entity.User{}); err != nil {
+		//if err := DBConn.Migrator().DropTable(&entity.Post{}); err != nil {
 		//	panic(err)
 		//}
-		//if err := DBConn.AutoMigrate(&entity.User{}); err != nil {
+		//if err := DBConn.AutoMigrate(&entity.Post{}); err != nil {
 		//	panic(err)
 		//}
 
