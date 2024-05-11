@@ -45,7 +45,7 @@ func main() {
 	app.Use(helmet.New())
 	app.Use(cors.New(cors.Config{
 		//AllowOrigins:  os.Getenv("CLIENT_URL"),
-		ExposeHeaders: os.Getenv("JWT_HEADER"),
+		//ExposeHeaders: os.Getenv("JWT_HEADER"),
 	}))
 	app.Use(etag.New())
 	app.Use(compress.New(compress.Config{

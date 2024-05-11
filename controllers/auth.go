@@ -23,19 +23,18 @@ func (c *AuthController) AuthLogin(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	userEntity, err := c.authService.AuthenticateUser(bodyData.Username, bodyData.Password)
+	userRecord, err := c.authService.AuthenticateUser(bodyData.Username, bodyData.Password)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	token, err := c.authService.CreateJWT(userEntity.ID)
+	token, err := c.authService.CreateJWT(userRecord.ID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	ctx.Set("TDT-Auth-Token", token)
-
 	return common.CreateResponse(ctx, fiber.StatusOK, "Login successfully", fiber.Map{
+		"user":  userRecord,
 		"token": token,
 	})
 }
@@ -56,9 +55,8 @@ func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	ctx.Set("TDT-Auth-Token", token)
-
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Register successfully", fiber.Map{
+		"user":  newUser,
 		"token": token,
 	})
 }

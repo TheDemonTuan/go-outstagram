@@ -75,16 +75,17 @@ func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.F
 	for _, file := range files {
 		ext := strings.Split(file.Header["Content-Type"][0], "/")[1]
 		randName := common.RandomNString(30)
-		newFileName := fmt.Sprintf("%s.%s", randName, ext)
+		newImageName := fmt.Sprintf("%s.%s", randName, ext)
 
 		//Check for errors
-		if err := ctx.SaveFile(file, p.GetStaticPath()+newFileName); err != nil {
+		if err := ctx.SaveFile(file, p.GetStaticPath()+newImageName); err != nil {
 			if err := p.PostCreateDeleteFiles(filePaths); err != nil {
 				return nil, err
 			}
 			return nil, errors.New("error while saving file " + file.Filename)
 		}
-		filePaths = append(filePaths, newFileName)
+
+		filePaths = append(filePaths, newImageName)
 	}
 
 	return filePaths, nil
