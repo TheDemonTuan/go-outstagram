@@ -66,12 +66,12 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 		randName := common.RandomString(25)
 		newFileName := fmt.Sprintf("%s.%s", randName, ext)
 
-		err := ctx.SaveFile(file, fmt.Sprintf("./%s/posts/%s", os.Getenv("STATIC_PATH"), newFileName))
+		err := ctx.SaveFile(file, p.postService.GetStaticPath(false)+newFileName)
 
 		//Check for errors
 		if err != nil {
 			for _, imagePath := range filePaths {
-				_ = os.Remove(fmt.Sprintf("./%s/posts/%s", os.Getenv("STATIC_PATH"), imagePath))
+				_ = os.Remove(p.postService.GetStaticPath(false) + imagePath)
 			}
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
@@ -86,12 +86,12 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 		ID:      common.RandomString(15),
 		UserID:  userID,
 		Caption: caption[0],
-		Files:   strings.Join(filePaths, ","), //Convert slice to string
+		Files:   p.postService.GetStaticPath(true) + "," + strings.Join(filePaths, ","), //Convert slice to string
 	}
 
 	if err := common.DBConn.Create(&newPost).Error; err != nil {
 		for _, imagePath := range filePaths {
-			_ = os.Remove(fmt.Sprintf("./%s/posts/%s", os.Getenv("STATIC_PATH"), imagePath))
+			_ = os.Remove(p.postService.GetStaticPath(false) + imagePath)
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while creating post")
 	}

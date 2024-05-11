@@ -55,7 +55,7 @@ func main() {
 	if os.Getenv("APP_ENV") == "development" {
 		app.Use(logger.New())
 	}
-	app.Static("/", "./"+os.Getenv("STATIC_PATH"))
+	app.Static("/public", "./"+os.Getenv("STATIC_PATH"))
 
 	routes.SetupRouter(app)
 	err := app.Listen(":" + os.Getenv("PORT"))
