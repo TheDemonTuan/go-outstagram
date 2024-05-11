@@ -13,6 +13,7 @@ type Post struct {
 	Files         string    `json:"files" gorm:"not null;"`
 	IsHideLike    bool      `json:"is_hide_like" gorm:"default:false"`
 	IsHideComment bool      `json:"is_hide_comment" gorm:"default:false"`
+	Active        bool      `json:"active" gorm:"default:true"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
