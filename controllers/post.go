@@ -45,7 +45,7 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	filePaths, err := p.postService.PostCreateUploadFiles(ctx, files)
+	localPaths, cloudinaryPaths, err := p.postService.PostCreateUploadFiles(ctx, files)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -53,7 +53,7 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals("currentUserId").(string)
 	userID := uuid.MustParse(rawUserID)
 
-	newPost, err := p.postService.PostCreateSaveToDB(userID, caption, filePaths)
+	newPost, err := p.postService.PostCreateSaveToDB(userID, caption, localPaths, cloudinaryPaths)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}

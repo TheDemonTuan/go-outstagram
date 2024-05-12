@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"mime/multipart"
@@ -16,10 +17,6 @@ type PostService struct{}
 
 func NewPostService() *PostService {
 	return &PostService{}
-}
-
-func (p *PostService) GetStaticPath() string {
-	return os.Getenv("STATIC_PATH") + "/posts/"
 }
 
 func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, []*multipart.FileHeader, error) {
@@ -58,6 +55,7 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, [
 		"image/jpeg": true,
 		"image/png":  true,
 		"image/jpg":  true,
+		"image/webp": true,
 		"video/mp4":  true,
 	}
 
@@ -70,47 +68,98 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, [
 	return caption[0], files, nil
 }
 
-func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.FileHeader) ([]string, error) {
-	var filePaths []string
+func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.FileHeader) ([]string, []*uploader.UploadResult, error) {
+	var localPaths []string
+	var cloudinaryPaths []*uploader.UploadResult
 	for _, file := range files {
 		ext := strings.Split(file.Header["Content-Type"][0], "/")[1]
 		randName := common.RandomNString(30)
 		newImageName := fmt.Sprintf("%s.%s", randName, ext)
 
-		//Check for errors
-		if err := ctx.SaveFile(file, p.GetStaticPath()+newImageName); err != nil {
-			if err := p.PostCreateDeleteFiles(filePaths); err != nil {
-				return nil, err
+		//Save to local
+		if err := ctx.SaveFile(file, newImageName); err != nil {
+			if err := p.PostCreateDeleteFiles(localPaths, cloudinaryPaths, true); err != nil {
+				return nil, nil, err
 			}
-			return nil, errors.New("error while saving file " + file.Filename)
+			return nil, nil, errors.New("error while saving file " + file.Filename)
 		}
 
-		filePaths = append(filePaths, newImageName)
+		isImage := file.Header["Content-Type"][0][:5] == "image"
+
+		params := uploader.UploadParams{
+			DisplayName: randName,
+			Folder:      "posts",
+		}
+
+		if isImage {
+			params = uploader.UploadParams{
+				Format:      "webp",
+				DisplayName: randName,
+				Folder:      "posts",
+			}
+		}
+
+		//Upload to cloudinary
+		result, err := common.CloudinaryUploadFile(newImageName, params)
+		if err != nil {
+			if err := p.PostCreateDeleteFiles(localPaths, cloudinaryPaths, true); err != nil {
+				return nil, nil, err
+			}
+			return nil, nil, errors.New("error while uploading file " + file.Filename)
+		}
+
+		cloudinaryPaths = append(cloudinaryPaths, result)
+		localPaths = append(localPaths, newImageName)
 	}
 
-	return filePaths, nil
+	if err := p.PostCreateDeleteFiles(localPaths, cloudinaryPaths, false); err != nil {
+		return nil, nil, err
+	}
+
+	return localPaths, cloudinaryPaths, nil
 }
 
-func (p *PostService) PostCreateDeleteFiles(filePaths []string) error {
-	for _, imagePath := range filePaths {
-		if err := os.Remove(p.GetStaticPath() + imagePath); err != nil {
-			return errors.New("error while deleting file " + imagePath)
+func (p *PostService) PostCreateDeleteFiles(localPaths []string, cloudinaryPaths []*uploader.UploadResult, isDeleteCloud bool) error {
+	isErr := false
+	for _, filePath := range localPaths {
+		if err := os.Remove(filePath); err != nil {
+			isErr = true
 		}
+	}
+
+	if isDeleteCloud || isErr {
+		for _, cloudinaryPath := range cloudinaryPaths {
+			if err := common.CloudinaryDeleteFile(cloudinaryPath.PublicID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if isErr {
+		return errors.New("error while deleting files")
 	}
 
 	return nil
 }
 
-func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, filePaths []string) (entity.Post, error) {
+func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+	newPostID := "TD" + common.RandomNString(18)
 	newPost := entity.Post{
-		ID:      "TD" + common.RandomNString(18),
+		ID:      newPostID,
 		UserID:  userID,
 		Caption: caption,
-		Files:   p.GetStaticPath() + "," + strings.Join(filePaths, ","),
+	}
+
+	for _, filePath := range cloudinaryPaths {
+		newPost.PostFiles = append(newPost.PostFiles, entity.PostFile{
+			ID:     filePath.PublicID,
+			PostID: newPostID,
+			URL:    filePath.SecureURL,
+		})
 	}
 
 	if err := common.DBConn.Create(&newPost).Error; err != nil {
-		if err := p.PostCreateDeleteFiles(filePaths); err != nil {
+		if err := p.PostCreateDeleteFiles(localPaths, cloudinaryPaths, true); err != nil {
 			return entity.Post{}, err
 		}
 		return entity.Post{}, errors.New("error while creating post")
