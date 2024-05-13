@@ -45,6 +45,10 @@ func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
+	if !c.authService.ValidateFullName(bodyData.FullName) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid full name")
+	}
+
 	newUser, err := c.authService.CreateUser(bodyData)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())

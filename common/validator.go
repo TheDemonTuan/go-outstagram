@@ -28,6 +28,8 @@ func Validator[T any](c *fiber.Ctx) (*T, error) {
 			return nil, errors.New(fmt.Sprintf("%s phải có ít nhất %v ký tự", err.Field(), err.Param()))
 		case "max":
 			return nil, errors.New(fmt.Sprintf("%s không được dài hơn %v ký tự", err.Field(), err.Param()))
+		case "alphanum":
+			return nil, errors.New(fmt.Sprintf("%s chỉ được phép chứa ký tự hoặc là số", err.Field()))
 		case "alphanumunicode":
 			return nil, errors.New(fmt.Sprintf("%s chỉ được phép chứa ký tự hoặc là số", err.Field()))
 		case "alphaunicode":

@@ -10,6 +10,7 @@ import (
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
+	"regexp"
 	"time"
 )
 
@@ -38,6 +39,14 @@ func (s *AuthService) AuthenticateUser(usernameOrEmailOrPhone, password string) 
 	return &userEntity, nil
 }
 
+func (s *AuthService) ValidateFullName(fullName string) bool {
+	match, err := regexp.Match(`^[a-zA-ZÀ-ỹ\s]+$`, []byte(fullName))
+	if err != nil {
+		return false
+	}
+	return match
+}
+
 func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error) {
 	var existingUser entity.User
 	if err := common.DBConn.First(&existingUser, "email = ? OR username = ?", bodyData.Email, bodyData.Username).Error; err != nil {
@@ -63,7 +72,7 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 		Email:    bodyData.Email,
 		Birthday: bodyData.Birthday,
 	}
-	if err := common.DBConn.Create(&newUser).Error; err != nil {
+	if err := common.DBConn.Omit("phone").Create(&newUser).Error; err != nil {
 		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating user")
 	}
 
