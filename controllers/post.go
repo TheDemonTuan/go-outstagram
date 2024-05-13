@@ -23,7 +23,7 @@ func NewPostController(postService *services.PostService) *PostController {
 func (p *PostController) PostGetAll(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals("currentUserId").(string)
 	var postRecords []entity.Post
-	if err := common.DBConn.Where("user_id = ?", rawUserID).Find(&postRecords).Error; err != nil {
+	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No posts found")
 		}

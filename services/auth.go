@@ -40,7 +40,7 @@ func (s *AuthService) AuthenticateUser(usernameOrEmailOrPhone, password string) 
 
 func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error) {
 	var existingUser entity.User
-	if err := common.DBConn.First(&existingUser, "email = ? OR username = ? OR phone = ?", bodyData.Email, bodyData.Username, bodyData.Phone).Error; err != nil {
+	if err := common.DBConn.First(&existingUser, "email = ? OR username = ?", bodyData.Email, bodyData.Username).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 		}
@@ -61,7 +61,6 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 		Password: string(hashedPassword),
 		FullName: bodyData.FullName,
 		Email:    bodyData.Email,
-		Phone:    bodyData.Phone,
 		Birthday: bodyData.Birthday,
 	}
 	if err := common.DBConn.Create(&newUser).Error; err != nil {
