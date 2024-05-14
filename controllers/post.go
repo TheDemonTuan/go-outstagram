@@ -94,10 +94,14 @@ func (p *PostController) PostLikeByPostID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals("currentUserId").(string)
 	userID := uuid.MustParse(rawUserID)
 
-	err := p.postService.PostLikeSaveToDB(postID, userID)
+	postLike, err := p.postService.PostLikeSaveToDB(postID, userID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return err
 	}
 
-	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", nil)
+	if !postLike.IsLiked {
+		return common.CreateResponse(ctx, fiber.StatusOK, "Post unliked", postLike)
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", postLike)
 }

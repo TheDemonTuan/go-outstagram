@@ -169,10 +169,21 @@ func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, local
 	return newPost, nil
 }
 
-func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) error {
-	var post entity.Post
-	if err := common.DBConn.Where("id = ?", postID).First(&post).Error; err != nil {
-		return errors.New("post not found")
+func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) (entity.PostLike, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.PostLike{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	var userRecord entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&userRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.PostLike{}, fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
 	var postLike entity.PostLike
@@ -184,16 +195,23 @@ func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) error {
 			}
 
 			if err := common.DBConn.Create(&postLike).Error; err != nil {
-				return errors.New("error while creating like")
+				return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating post like")
 			}
-			return nil
+
+			return postLike, nil
 		}
-		return errors.New("error while querying like")
+		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
 	}
 
-	if err := common.DBConn.Delete(&postLike).Error; err != nil {
-		return errors.New("error while deleting like")
+	if postLike.IsLiked {
+		postLike.IsLiked = false
+	} else {
+		postLike.IsLiked = true
 	}
 
-	return nil
+	if err := common.DBConn.Save(&postLike).Error; err != nil {
+		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post like")
+	}
+
+	return postLike, nil
 }

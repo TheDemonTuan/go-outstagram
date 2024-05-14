@@ -7,9 +7,10 @@ import (
 )
 
 type PostLike struct {
-	ID     string    `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
-	PostID string    `json:"post_id" gorm:"not null;size:20"`
-	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
+	ID      string    `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
+	PostID  string    `json:"post_id" gorm:"not null;size:20"`
+	UserID  uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
+	IsLiked bool      `json:"is_liked" gorm:"default:true"`
 
 	Post Post `json:"-" gorm:"foreignKey:PostID;references:ID"`
 	User User `json:"-" gorm:"foreignKey:UserID;references:ID"`
