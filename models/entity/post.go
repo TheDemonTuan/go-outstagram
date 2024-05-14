@@ -15,6 +15,7 @@ type Post struct {
 	Active        bool      `json:"active" gorm:"default:true"`
 
 	PostFiles []PostFile `json:"post_images" gorm:"foreignKey:PostID;references:ID"`
+	PostLikes []PostLike `json:"post_likes" gorm:"foreignKey:PostID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

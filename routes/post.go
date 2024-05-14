@@ -12,6 +12,9 @@ func postRouter(r fiber.Router) {
 	postService := services.NewPostService()
 	postController := controllers.NewPostController(postService)
 
-	postRoute.Add("GET", "", postController.PostGetAll)
+	postRoute.Add("GET", "me", postController.PostGetAll)
+	postRoute.Add("GET", "user/:userID", postController.PostGetAllByUserID)
+	postRoute.Add("GET", ":postID", postController.PostGetByPostID)
 	postRoute.Add("POST", "", postController.PostCreate)
+	postRoute.Add("POST", "like/:postID", postController.PostLikeByPostID)
 }

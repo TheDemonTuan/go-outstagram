@@ -23,7 +23,7 @@ func NewPostController(postService *services.PostService) *PostController {
 func (p *PostController) PostGetAll(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals("currentUserId").(string)
 	var postRecords []entity.Post
-	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Find(&postRecords).Error; err != nil {
+	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No posts found")
 		}
@@ -31,6 +31,34 @@ func (p *PostController) PostGetAll(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
+}
+
+func (p *PostController) PostGetAllByUserID(ctx *fiber.Ctx) error {
+	userID := ctx.Params("userID")
+
+	var postRecords []entity.Post
+	if err := common.DBConn.Where("user_id = ?", userID).Preload("PostFiles").Preload("PostLikes").Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
+}
+
+func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).Preload("PostFiles").Preload("PostLikes").First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "Post not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
 }
 
 func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
@@ -59,4 +87,17 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Post created", newPost)
+}
+
+func (p *PostController) PostLikeByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals("currentUserId").(string)
+	userID := uuid.MustParse(rawUserID)
+
+	err := p.postService.PostLikeSaveToDB(postID, userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", nil)
 }

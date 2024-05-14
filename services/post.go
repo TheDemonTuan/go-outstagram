@@ -6,6 +6,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"mime/multipart"
 	"os"
 	"outstagram/common"
@@ -166,4 +167,33 @@ func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, local
 	}
 
 	return newPost, nil
+}
+
+func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) error {
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&post).Error; err != nil {
+		return errors.New("post not found")
+	}
+
+	var postLike entity.PostLike
+	if err := common.DBConn.Where("post_id = ? AND user_id = ?", postID, userID).First(&postLike).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			postLike = entity.PostLike{
+				PostID: postID,
+				UserID: userID,
+			}
+
+			if err := common.DBConn.Create(&postLike).Error; err != nil {
+				return errors.New("error while creating like")
+			}
+			return nil
+		}
+		return errors.New("error while querying like")
+	}
+
+	if err := common.DBConn.Delete(&postLike).Error; err != nil {
+		return errors.New("error while deleting like")
+	}
+
+	return nil
 }
