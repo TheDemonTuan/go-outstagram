@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"outstagram/common"
 	"outstagram/models/entity"
+	"outstagram/models/req"
 	"outstagram/services"
 )
 
@@ -20,10 +21,10 @@ func NewPostController(postService *services.PostService) *PostController {
 	}
 }
 
-func (p *PostController) PostGetAll(ctx *fiber.Ctx) error {
+func (p *PostController) PostMeGetAll(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals("currentUserId").(string)
 	var postRecords []entity.Post
-	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Find(&postRecords).Error; err != nil {
+	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Order("created_at DESC").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No posts found")
 		}
@@ -33,35 +34,7 @@ func (p *PostController) PostGetAll(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
 }
 
-func (p *PostController) PostGetAllByUserID(ctx *fiber.Ctx) error {
-	userID := ctx.Params("userID")
-
-	var postRecords []entity.Post
-	if err := common.DBConn.Where("user_id = ?", userID).Preload("PostFiles").Preload("PostLikes").Find(&postRecords).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusNotFound, "No posts found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
-	}
-
-	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
-}
-
-func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
-	postID := ctx.Params("postID")
-
-	var post entity.Post
-	if err := common.DBConn.Where("id = ?", postID).Preload("PostFiles").Preload("PostLikes").First(&post).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusNotFound, "Post not found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
-	}
-
-	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
-}
-
-func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
+func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 	form, err := ctx.MultipartForm()
 
 	if err != nil {
@@ -89,7 +62,7 @@ func (p *PostController) PostCreate(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Post created", newPost)
 }
 
-func (p *PostController) PostLikeByPostID(ctx *fiber.Ctx) error {
+func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
 	rawUserID := ctx.Locals("currentUserId").(string)
 	userID := uuid.MustParse(rawUserID)
@@ -104,4 +77,80 @@ func (p *PostController) PostLikeByPostID(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", postLike)
+}
+
+func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals("currentUserId").(string)
+	userID := uuid.MustParse(rawUserID)
+
+	bodyData, err := common.Validator[req.PostMeEdit](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	post, err := p.postService.PostEditSaveToDB(postID, userID, bodyData.Caption)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post edited", post)
+}
+
+func (p *PostController) PostMeDeleteByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals("currentUserId").(string)
+	userID := uuid.MustParse(rawUserID)
+
+	if err := p.postService.PostDeleteSaveToDB(postID, userID); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post deleted", nil)
+}
+
+func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals("currentUserId").(string)
+	userID := uuid.MustParse(rawUserID)
+
+	bodyData, err := common.Validator[req.PostMeComment](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	postComment, err := p.postService.PostCommentSaveToDB(postID, userID, bodyData.Content)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusCreated, "Comment created", postComment)
+}
+
+func (p *PostController) PostGetAllByUserID(ctx *fiber.Ctx) error {
+	userID := ctx.Params("userID")
+
+	var postRecords []entity.Post
+	if err := common.DBConn.Where("user_id = ?", userID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
+}
+
+func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "Post not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
 }

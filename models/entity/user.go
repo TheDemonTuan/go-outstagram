@@ -20,8 +20,9 @@ type User struct {
 	Role     bool      `json:"role" gorm:"default:false"`
 	Active   bool      `json:"active" gorm:"default:true"`
 
-	Posts     []Post     `json:"posts" gorm:"foreignKey:UserID"`
-	PostLikes []PostLike `json:"post_likes" gorm:"foreignKey:UserID"`
+	Posts        []Post        `json:"posts" gorm:"foreignKey:UserID;references:ID"`
+	PostLikes    []PostLike    `json:"post_likes" gorm:"foreignKey:UserID;references:ID"`
+	PostComments []PostComment `json:"post_comments" gorm:"foreignKey:UserID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

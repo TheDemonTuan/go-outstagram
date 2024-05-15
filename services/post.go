@@ -148,7 +148,7 @@ func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, local
 	newPost := entity.Post{
 		ID:      newPostID,
 		UserID:  userID,
-		Caption: caption,
+		Caption: strings.Trim(caption, " "),
 	}
 
 	for _, filePath := range cloudinaryPaths {
@@ -214,4 +214,72 @@ func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) (entity.
 	}
 
 	return postLike, nil
+}
+
+func (p *PostService) PostEditSaveToDB(postID string, userID uuid.UUID, caption string) (entity.Post, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.Post{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return entity.Post{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	if caption == postRecord.Caption {
+		return postRecord, nil
+	}
+
+	postRecord.Caption = strings.Trim(caption, " ")
+
+	if err := common.DBConn.Save(&postRecord).Error; err != nil {
+		return entity.Post{}, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post")
+	}
+
+	return postRecord, nil
+}
+
+func (p *PostService) PostDeleteSaveToDB(postID string, userID uuid.UUID) error {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	if err := common.DBConn.Delete(&postRecord).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while deleting post")
+	}
+
+	return nil
+}
+
+func (p *PostService) PostCommentSaveToDB(postID string, userID uuid.UUID, content string) (entity.PostComment, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	var userRecord entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&userRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	newPostComment := entity.PostComment{
+		PostID:  postID,
+		UserID:  userID,
+		Content: strings.Trim(content, " "),
+	}
+
+	if err := common.DBConn.Create(&newPostComment).Error; err != nil {
+		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating post comment")
+	}
+
+	return newPostComment, nil
 }

@@ -35,7 +35,7 @@ func runMigrate() {
 		//if err := DBConn.Migrator().DropTable(&entity.PostLike{}); err != nil {
 		//	panic(err)
 		//}
-		//if err := DBConn.AutoMigrate(&entity.Post{}, &entity.PostFile{}, &entity.PostLike{}, &entity.User{}); err != nil {
+		//if err := DBConn.AutoMigrate(&entity.Post{}, &entity.PostFile{}, &entity.PostLike{}, &entity.PostComment{}, &entity.User{}); err != nil {
 		//	panic(err)
 		//}
 
