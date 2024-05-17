@@ -5,6 +5,9 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"os"
+	"outstagram/common"
+	"outstagram/models/entity"
+	"outstagram/services"
 )
 
 func Protected() fiber.Handler {
@@ -18,12 +21,24 @@ func Protected() fiber.Handler {
 func jwtSuccess(c *fiber.Ctx) error {
 	user := c.Locals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
-	uuid, ok := claims["uuid"].(string)
+	userID, ok := claims["uuid"].(string)
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
 
-	c.Locals("currentUserId", uuid)
+	userService := services.NewUserService()
+	var userRecord entity.User
+	if err := userService.UserGetByUserID(userID, &userRecord); err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+
+	if !userRecord.Active {
+		return fiber.NewError(fiber.StatusUnauthorized, "User is not active")
+	}
+
+	c.Locals(common.UserIDLocalKey, userID)
+	c.Locals(common.UserInfoLocalKey, userRecord)
+
 	return c.Next()
 }
 

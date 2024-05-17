@@ -144,7 +144,7 @@ func (p *PostService) PostCreateDeleteFiles(localPaths []string, cloudinaryPaths
 	return nil
 }
 
-func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
 	newPostID := "TD" + common.RandomNString(18)
 	newPost := entity.Post{
 		ID:      newPostID,
@@ -170,7 +170,7 @@ func (p *PostService) PostCreateSaveToDB(userID uuid.UUID, caption string, local
 	return newPost, nil
 }
 
-func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) (entity.PostLike, error) {
+func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.PostLike, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -217,7 +217,7 @@ func (p *PostService) PostLikeSaveToDB(postID string, userID uuid.UUID) (entity.
 	return postLike, nil
 }
 
-func (p *PostService) PostEditSaveToDB(postID string, userID uuid.UUID, caption string) (entity.Post, error) {
+func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption string) (entity.Post, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -239,7 +239,7 @@ func (p *PostService) PostEditSaveToDB(postID string, userID uuid.UUID, caption 
 	return postRecord, nil
 }
 
-func (p *PostService) PostDeleteSaveToDB(postID string, userID uuid.UUID) error {
+func (p *PostService) PostDeleteByPostID(postID string, userID uuid.UUID) error {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -255,7 +255,7 @@ func (p *PostService) PostDeleteSaveToDB(postID string, userID uuid.UUID) error 
 	return nil
 }
 
-func (p *PostService) PostCommentSaveToDB(postID string, userID uuid.UUID, content string) (entity.PostComment, error) {
+func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string) (entity.PostComment, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -285,7 +285,7 @@ func (p *PostService) PostCommentSaveToDB(postID string, userID uuid.UUID, conte
 	return newPostComment, nil
 }
 
-func (s *PostService) GetAllCommentsByPostID(postID string) ([]req.PostComment, error) {
+func (p *PostService) PostGetAllCommentByPostID(postID string) ([]req.PostComment, error) {
 	var commentsWithUsers []struct {
 		entity.PostComment
 		entity.User

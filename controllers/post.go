@@ -22,7 +22,7 @@ func NewPostController(postService *services.PostService) *PostController {
 }
 
 func (p *PostController) PostMeGetAll(ctx *fiber.Ctx) error {
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	var postRecords []entity.Post
 	if err := common.DBConn.Where("user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Order("created_at DESC").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -51,10 +51,10 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	newPost, err := p.postService.PostCreateSaveToDB(userID, caption, localPaths, cloudinaryPaths)
+	newPost, err := p.postService.PostCreateByUserID(userID, caption, localPaths, cloudinaryPaths)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -64,10 +64,10 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 
 func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	postLike, err := p.postService.PostLikeSaveToDB(postID, userID)
+	postLike, err := p.postService.PostLikeByPostID(postID, userID)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 
 func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
 	bodyData, err := common.Validator[req.PostMeEdit](ctx)
@@ -89,7 +89,7 @@ func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	post, err := p.postService.PostEditSaveToDB(postID, userID, bodyData.Caption)
+	post, err := p.postService.PostEditByPostID(postID, userID, bodyData.Caption)
 	if err != nil {
 		return err
 	}
@@ -99,19 +99,19 @@ func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 
 func (p *PostController) PostMeDeleteByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	if err := p.postService.PostDeleteSaveToDB(postID, userID); err != nil {
+	if err := p.postService.PostDeleteByPostID(postID, userID); err != nil {
 		return err
 	}
 
-	return common.CreateResponse(ctx, fiber.StatusOK, "Post deleted", nil)
+	return common.CreateResponse(ctx, fiber.StatusNoContent, "Post deleted", nil)
 }
 
 func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals("currentUserId").(string)
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
 	bodyData, err := common.Validator[req.PostMeComment](ctx)
@@ -119,7 +119,7 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	postComment, err := p.postService.PostCommentSaveToDB(postID, userID, bodyData.Content)
+	postComment, err := p.postService.PostCommentByPostID(postID, userID, bodyData.Content)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
 func (p *PostController) PostGetAllCommentByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
 
-	resultComments, err := p.postService.GetAllCommentsByPostID(postID)
+	resultComments, err := p.postService.PostGetAllCommentByPostID(postID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No comments found")

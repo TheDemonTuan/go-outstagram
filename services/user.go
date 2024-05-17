@@ -21,16 +21,6 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
-func (u *UserService) UserGetMe(userID string, userRecord *entity.User) error {
-	if err := common.DBConn.Where("id = ?", userID).Find(userRecord).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusNotFound, "user not found")
-		}
-		return fiber.NewError(fiber.StatusBadRequest, "error when fetching user data")
-	}
-	return nil
-}
-
 func (u *UserService) UserGetByUserID(userID string, userRecord *entity.User) error {
 	if err := common.DBConn.Where("id = ?", userID).Find(userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -42,7 +32,7 @@ func (u *UserService) UserGetByUserID(userID string, userRecord *entity.User) er
 
 }
 
-func (p *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multipart.FileHeader, error) {
+func (u *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multipart.FileHeader, error) {
 	if body == nil {
 		return nil, errors.New("request body is required")
 	}
@@ -64,7 +54,7 @@ func (p *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multip
 	return files[0], nil
 }
 
-func (p *UserService) AvatarUploadFile(ctx *fiber.Ctx, file *multipart.FileHeader) (string, error) {
+func (u *UserService) AvatarUploadFile(ctx *fiber.Ctx, file *multipart.FileHeader) (string, error) {
 	if file == nil {
 		return "", errors.New("avatar file is required")
 	}
@@ -100,13 +90,13 @@ func (p *UserService) AvatarUploadFile(ctx *fiber.Ctx, file *multipart.FileHeade
 	return result.SecureURL, nil
 }
 
-func (u *UserService) UserEditSaveToDB(userID string, userRecord *req.UserMeUpdate, avatarFile *multipart.FileHeader, ctx *fiber.Ctx) error {
+func (u *UserService) UserEditByUserID(userID string, userRecord *req.UserMeUpdate, avatarFile *multipart.FileHeader, ctx *fiber.Ctx) error {
 	var user entity.User
 	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("user not found: %v", err)
+			return fiber.NewError(fiber.StatusBadRequest, "User not found")
 		}
-		return fmt.Errorf("error while querying user: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
 	user.Email = userRecord.Email
@@ -120,13 +110,13 @@ func (u *UserService) UserEditSaveToDB(userID string, userRecord *req.UserMeUpda
 	if avatarFile != nil {
 		avatarURL, err := u.AvatarUploadFile(ctx, avatarFile) // Sửa đổi ở đây
 		if err != nil {
-			return fmt.Errorf("error while uploading avatar: %v", err)
+			return fiber.NewError(fiber.StatusBadRequest, "error while uploading avatar")
 		}
 
 		// Delete old avatar file if exists
 		if user.Avatar != "" {
 			if err := common.CloudinaryDeleteFile(user.Avatar); err != nil {
-				return fmt.Errorf("error while deleting old avatar file: %v", err)
+				return fiber.NewError(fiber.StatusInternalServerError, "error while deleting old avatar")
 			}
 		}
 
@@ -134,7 +124,43 @@ func (u *UserService) UserEditSaveToDB(userID string, userRecord *req.UserMeUpda
 	}
 
 	if err := common.DBConn.Save(&user).Error; err != nil {
-		return fmt.Errorf("error while updating user: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserBanByUserID(userID string) error {
+	var user entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	user.Active = false
+
+	if err := common.DBConn.Save(&user).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserUnbanByUserID(userID string) error {
+	var user entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	user.Active = true
+
+	if err := common.DBConn.Save(&user).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
 	}
 
 	return nil

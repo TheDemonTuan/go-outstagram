@@ -66,7 +66,7 @@ func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
 }
 
 func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
-	currentUserID, currenUserIdIsOk := ctx.Locals("currentUserId").(string)
+	currentUserID, currenUserIdIsOk := ctx.Locals(common.UserIDLocalKey).(string)
 	if !currenUserIdIsOk {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
