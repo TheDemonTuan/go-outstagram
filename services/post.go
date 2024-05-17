@@ -11,6 +11,7 @@ import (
 	"os"
 	"outstagram/common"
 	"outstagram/models/entity"
+	"outstagram/models/req"
 	"strings"
 )
 
@@ -282,4 +283,37 @@ func (p *PostService) PostCommentSaveToDB(postID string, userID uuid.UUID, conte
 	}
 
 	return newPostComment, nil
+}
+
+func (s *PostService) GetAllCommentsByPostID(postID string) ([]req.PostComment, error) {
+	var commentsWithUsers []struct {
+		entity.PostComment
+		entity.User
+	}
+
+	err := common.DBConn.Table("post_comments").
+		Select("post_comments.*, users.*").
+		Joins("JOIN users ON post_comments.user_id = users.id").
+		Where("post_comments.post_id = ?", postID).
+		Find(&commentsWithUsers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var resultComments []req.PostComment
+	for _, c := range commentsWithUsers {
+		resultComments = append(resultComments, req.PostComment{
+			ID:        c.PostComment.ID,
+			Content:   c.PostComment.Content,
+			CreatedAt: c.PostComment.CreatedAt,
+			User: req.UserComment{
+				ID:       c.User.ID.String(),
+				Username: c.User.Username,
+				FullName: c.User.FullName,
+				Avatar:   c.User.Avatar,
+			},
+		})
+	}
+
+	return resultComments, nil
 }
