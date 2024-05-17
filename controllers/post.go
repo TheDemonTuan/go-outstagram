@@ -154,3 +154,17 @@ func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
 }
+
+func (p *PostController) PostGetAllCommentByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+
+	resultComments, err := p.postService.GetAllCommentsByPostID(postID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No comments found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying comments")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Comments found", resultComments)
+}
