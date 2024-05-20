@@ -21,6 +21,32 @@ func NewPostService() *PostService {
 	return &PostService{}
 }
 
+func (p *PostService) PostGetByPostID(postID string) (entity.Post, error) {
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&post).Error; err != nil {
+		return entity.Post{}, err
+	}
+
+	return post, nil
+
+}
+
+func (p *PostService) PostGetAllByUserID(userID string, posts *[]entity.Post) error {
+	if err := common.DBConn.Where("user_id = ?", userID).Find(&posts).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PostService) PostGetAll(posts *[]entity.Post) error {
+	if err := common.DBConn.Find(&posts).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, []*multipart.FileHeader, error) {
 	if body == nil {
 		return "", nil, errors.New("request body is required")

@@ -14,6 +14,12 @@ import (
 	"outstagram/routes"
 )
 
+type Input struct {
+	Query         string                 `query:"query"`
+	OperationName string                 `query:"operationName"`
+	Variables     map[string]interface{} `query:"variables"`
+}
+
 func init() {
 	common.LoadEnvVar()
 	common.ConnectDB()
@@ -55,11 +61,9 @@ func main() {
 	if os.Getenv("APP_ENV") == "development" {
 		app.Use(logger.New())
 	}
-	//app.Static("/public", "./"+os.Getenv("STATIC_PATH"))
 
 	routes.SetupRouter(app)
-	err := app.Listen(":" + os.Getenv("PORT"))
-	if err != nil {
+	if err := app.Listen(":" + os.Getenv("PORT")); err != nil {
 		panic(err)
 	}
 }
