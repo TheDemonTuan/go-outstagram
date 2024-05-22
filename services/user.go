@@ -24,12 +24,33 @@ func NewUserService() *UserService {
 func (u *UserService) UserGetByUserID(userID string, userRecord *entity.User) error {
 	if err := common.DBConn.Where("id = ?", userID).Find(userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+			return errors.New("user not found")
 		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+		return errors.New("error while querying user")
 	}
 	return nil
 
+}
+
+func (u *UserService) UserSearchByUsernameOrFullName(keyword string, users *[]entity.User) error {
+	if err := common.DBConn.Where("username LIKE ? OR full_name LIKE ?", "%"+keyword+"%", "%"+keyword+"%").Find(users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error while querying user")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserGetByUserName(username string, userRecord *entity.User) error {
+	if err := common.DBConn.Where("username = ?", username).Find(userRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error while querying user")
+	}
+	return nil
 }
 
 func (u *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multipart.FileHeader, error) {
