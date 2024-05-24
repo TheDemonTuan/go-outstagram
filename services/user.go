@@ -120,28 +120,31 @@ func (u *UserService) UserEditByUserID(userID string, userRecord *req.UserMeUpda
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
-	user.Email = userRecord.Email
+	//user.Email = userRecord.Email
 	user.Username = userRecord.Username
 	user.FullName = userRecord.FullName
-	user.Phone = userRecord.Phone
+	//user.Phone = userRecord.Phone
 	user.Birthday = userRecord.Birthday
 	user.Bio = userRecord.Bio
 	user.Gender = userRecord.Gender
 
 	if avatarFile != nil {
-		avatarURL, err := u.AvatarUploadFile(ctx, avatarFile) // Sửa đổi ở đây
+		avatarURL, err := u.AvatarUploadFile(ctx, avatarFile)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "error while uploading avatar")
+			return fmt.Errorf("error while uploading avatar: %v", err)
 		}
 
-		// Delete old avatar file if exists
-		if user.Avatar != "" {
+		if user.Avatar != "" && user.Avatar != avatarURL {
 			if err := common.CloudinaryDeleteFile(user.Avatar); err != nil {
-				return fiber.NewError(fiber.StatusInternalServerError, "error while deleting old avatar")
+				return fmt.Errorf("error while deleting old avatar file: %v", err)
 			}
 		}
 
 		user.Avatar = avatarURL
+	} else {
+		if userRecord.Avatar != "" {
+			user.Avatar = userRecord.Avatar
+		}
 	}
 
 	if err := common.DBConn.Save(&user).Error; err != nil {
