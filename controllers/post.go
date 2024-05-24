@@ -38,7 +38,7 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 	form, err := ctx.MultipartForm()
 
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	caption, files, err := p.postService.PostCreateValidateRequest(form)

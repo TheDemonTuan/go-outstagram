@@ -10,8 +10,6 @@ import (
 	"os"
 	"outstagram/common"
 	"outstagram/models/entity"
-	"outstagram/models/req"
-	"path/filepath"
 	"strings"
 )
 
@@ -53,7 +51,7 @@ func (u *UserService) UserGetByUserName(username string, userRecord *entity.User
 	return nil
 }
 
-func (u *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multipart.FileHeader, error) {
+func (u *UserService) UserMeUploadAvatarValidateRequest(body *multipart.Form) (*multipart.FileHeader, error) {
 	if body == nil {
 		return nil, errors.New("request body is required")
 	}
@@ -72,46 +70,61 @@ func (u *UserService) AvatarUploadValidateRequest(body *multipart.Form) (*multip
 		return nil, errors.New("only one avatar file is allowed")
 	}
 
+	acceptType := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/jpg":  true,
+		"image/webp": true,
+	}
+
+	for _, file := range files {
+		if !acceptType[file.Header["Content-Type"][0]] {
+			return nil, errors.New(file.Filename + "file type is not supported")
+		}
+	}
+
 	return files[0], nil
 }
 
-func (u *UserService) AvatarUploadFile(ctx *fiber.Ctx, file *multipart.FileHeader) (string, error) {
-	if file == nil {
-		return "", errors.New("avatar file is required")
+func (u *UserService) UserMeUploadAvatar(file *multipart.FileHeader, ctx *fiber.Ctx) (*uploader.UploadResult, error) {
+	ext := strings.Split(file.Header["Content-Type"][0], "/")[1]
+	name := ctx.Locals(common.UserIDLocalKey).(string)
+	newAvatarName := fmt.Sprintf("%s.%s", name, ext)
+
+	//Save to local
+	if err := ctx.SaveFile(file, newAvatarName); err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "error while saving file")
 	}
 
-	ext := filepath.Ext(file.Filename)
-	randName := common.RandomNString(30)
-	newImageName := fmt.Sprintf("%s%s", randName, ext)
+	result, err := common.CloudinaryUploadFile(newAvatarName, uploader.UploadParams{
+		Folder:      "users/avatar",
+		DisplayName: name,
+		Format:      "webp",
+	})
 
-	if err := ctx.SaveFile(file, newImageName); err != nil {
-		return "", errors.New("error while saving file " + file.Filename)
-	}
-
-	isImage := strings.HasPrefix(file.Header.Get("Content-Type"), "image/")
-
-	params := uploader.UploadParams{
-		DisplayName: randName,
-		Folder:      "avatars",
-	}
-
-	if isImage {
-		params.Format = "webp"
-	}
-
-	result, err := common.CloudinaryUploadFile(newImageName, params)
 	if err != nil {
-		return "", errors.New("error while uploading file " + file.Filename)
+		if err := os.Remove(newAvatarName); err != nil {
+			return nil, fiber.NewError(fiber.StatusInternalServerError, "error while deleting file")
+		}
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "error while uploading file")
 	}
 
-	if err := os.Remove(newImageName); err != nil {
-		return "", errors.New("error while deleting local file " + newImageName)
+	if err := os.Remove(newAvatarName); err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "error while deleting file")
 	}
 
-	return result.SecureURL, nil
+	return result, nil
 }
 
-func (u *UserService) UserEditByUserID(userID string, userRecord *req.UserMeUpdate, avatarFile *multipart.FileHeader, ctx *fiber.Ctx) error {
+func (u *UserService) UserMeDeleteAvatar(publicID string) error {
+	if err := common.CloudinaryDeleteFile(publicID); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while deleting file")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserMeSaveAvatarToDB(userID string, secureURL string) error {
 	var user entity.User
 	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -120,35 +133,22 @@ func (u *UserService) UserEditByUserID(userID string, userRecord *req.UserMeUpda
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
-	//user.Email = userRecord.Email
-	user.Username = userRecord.Username
-	user.FullName = userRecord.FullName
-	//user.Phone = userRecord.Phone
-	user.Birthday = userRecord.Birthday
-	user.Bio = userRecord.Bio
-	user.Gender = userRecord.Gender
-
-	if avatarFile != nil {
-		avatarURL, err := u.AvatarUploadFile(ctx, avatarFile)
-		if err != nil {
-			return fmt.Errorf("error while uploading avatar: %v", err)
-		}
-
-		if user.Avatar != "" && user.Avatar != avatarURL {
-			if err := common.CloudinaryDeleteFile(user.Avatar); err != nil {
-				return fmt.Errorf("error while deleting old avatar file: %v", err)
-			}
-		}
-
-		user.Avatar = avatarURL
-	} else {
-		if userRecord.Avatar != "" {
-			user.Avatar = userRecord.Avatar
-		}
-	}
+	oldAvatar := user.Avatar
+	user.Avatar = secureURL
 
 	if err := common.DBConn.Save(&user).Error; err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	//Delete old avatar
+	if oldAvatar != "" {
+		publicID, err := common.GetPublicIDFromURL("users/avatar", oldAvatar)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "error while getting public ID")
+		}
+		if err := u.UserMeDeleteAvatar(publicID); err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "error while deleting file")
+		}
 	}
 
 	return nil

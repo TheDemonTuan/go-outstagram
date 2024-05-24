@@ -4,7 +4,10 @@ import (
 	"context"
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 func newCloudinary() *cloudinary.Cloudinary {
@@ -34,4 +37,19 @@ func CloudinaryDeleteFile(publicID string) error {
 		return err
 	}
 	return nil
+}
+
+func GetPublicIDFromURL(prefix string, imageURL string) (string, error) {
+	parsedURL, err := url.Parse(imageURL)
+	if err != nil {
+		return "", err
+	}
+
+	path := parsedURL.Path
+	segments := strings.Split(path, "/")
+
+	publicIDWithExtension := segments[len(segments)-1]
+	publicID := strings.TrimSuffix(publicIDWithExtension, filepath.Ext(publicIDWithExtension))
+
+	return prefix + "/" + publicID, nil
 }
