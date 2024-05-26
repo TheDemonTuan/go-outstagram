@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Validator[T any](c *fiber.Ctx) (*T, error) {
+func RequestBodyValidator[T any](c *fiber.Ctx) (*T, error) {
 	body := new(T)
 
 	if err := c.BodyParser(body); err != nil {

@@ -62,16 +62,19 @@ func (u *UserController) UserMeUploadAvatar(ctx *fiber.Ctx) error {
 }
 
 func (u *UserController) UserMeEditProfile(ctx *fiber.Ctx) error {
-	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
-
-	bodyData, err := common.Validator[req.UserMeUpdate](ctx)
+	bodyData, err := common.RequestBodyValidator[req.UserMeUpdate](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	if err := u.userService.UserMeEditProfile(rawUserID, bodyData); err != nil {
+	if err := u.userService.UserMeEditProfileValidateRequest(bodyData); err != nil {
 		return err
 	}
-	return common.CreateResponse(ctx, fiber.StatusOK, "Profile updated", bodyData)
+
+	user, err := u.userService.UserMeEditProfileSaveToDB(ctx, bodyData)
+	if err != nil {
+		return err
+	}
+	return common.CreateResponse(ctx, fiber.StatusOK, "Profile updated", user)
 
 }

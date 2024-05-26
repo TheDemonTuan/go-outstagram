@@ -11,6 +11,7 @@ import (
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
+	"regexp"
 	"strings"
 )
 
@@ -23,9 +24,9 @@ func NewUserService() *UserService {
 func (u *UserService) UserGetByUserID(userID string, userRecord *entity.User) error {
 	if err := common.DBConn.Where("id = ?", userID).Find(userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("user not found")
+			return fiber.NewError(fiber.StatusBadRequest, "User not found")
 		}
-		return errors.New("error while querying user")
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 	return nil
 
@@ -191,35 +192,55 @@ func (u *UserService) UserUnbanByUserID(userID string) error {
 	return nil
 }
 
-func (u *UserService) UserMeEditProfile(userID string, userRecord *req.UserMeUpdate) error {
-	var user entity.User
-	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+func (u *UserService) UserMeEditProfileValidateRequest(userRecord *req.UserMeUpdate) error {
+	match, err := regexp.Match(`^[a-zA-ZÀ-ỹ\s]+$`, []byte(userRecord.FullName))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid full name")
+	}
+
+	if !match {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid full name")
+	}
+
+	if userRecord.Gender != "male" && userRecord.Gender != "female" {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid gender")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.UserMeUpdate) (entity.User, error) {
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	genderConvert := true
+	if userRecord.Gender == "male" {
+		genderConvert = false
+	}
+
+	if userInfo.Username == userRecord.Username && userInfo.FullName == userRecord.FullName && userInfo.Birthday.Format("2006-01-02") == userRecord.Birthday.Format("2006-01-02") && userInfo.Bio == userRecord.Bio && userInfo.Gender == genderConvert {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "No change")
 	}
 
 	var existingUser entity.User
 	if err := common.DBConn.Where("username = ?", userRecord.Username).First(&existingUser).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusInternalServerError, "Error while querying username")
-		}
-	} else {
-		if existingUser.ID != user.ID {
-			return fiber.NewError(fiber.StatusBadRequest, "Username already exists")
+			return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying username")
 		}
 	}
 
-	user.Username = userRecord.Username
-	user.FullName = userRecord.FullName
-	user.Birthday = userRecord.Birthday
-	user.Bio = userRecord.Bio
-	user.Gender = userRecord.Gender
-
-	if err := common.DBConn.Model(&user).Omit("phone").Updates(&user).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	if existingUser.ID != userInfo.ID {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "Username already exists")
 	}
 
-	return nil
+	userInfo.Username = userRecord.Username
+	userInfo.FullName = userRecord.FullName
+	userInfo.Birthday = userRecord.Birthday
+	userInfo.Bio = userRecord.Bio
+	userInfo.Gender = genderConvert
+
+	if err := common.DBConn.Save(&userInfo).Error; err != nil {
+		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	return existingUser, nil
 }

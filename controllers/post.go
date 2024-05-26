@@ -84,7 +84,7 @@ func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	bodyData, err := common.Validator[req.PostMeEdit](ctx)
+	bodyData, err := common.RequestBodyValidator[req.PostMeEdit](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -114,7 +114,7 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	bodyData, err := common.Validator[req.PostMeComment](ctx)
+	bodyData, err := common.RequestBodyValidator[req.PostMeComment](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

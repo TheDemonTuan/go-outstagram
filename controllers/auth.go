@@ -18,7 +18,7 @@ func NewAuthController(authService *services.AuthService) *AuthController {
 }
 
 func (c *AuthController) AuthLogin(ctx *fiber.Ctx) error {
-	bodyData, err := common.Validator[req.AuthLogin](ctx)
+	bodyData, err := common.RequestBodyValidator[req.AuthLogin](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -40,7 +40,7 @@ func (c *AuthController) AuthLogin(ctx *fiber.Ctx) error {
 }
 
 func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
-	bodyData, err := common.Validator[req.AuthRegister](ctx)
+	bodyData, err := common.RequestBodyValidator[req.AuthRegister](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

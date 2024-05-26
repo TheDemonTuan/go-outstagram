@@ -14,7 +14,7 @@ func userRouter(r fiber.Router) {
 
 	userRoute.Add("GET", "me", userController.UserGetMe)
 	userRoute.Add("PATCH", "me/avatar", userController.UserMeUploadAvatar)
-	userRoute.Add("PUT", "me/profile", userController.UserMeEditProfile)
+	userRoute.Add("PATCH", "me/profile", userController.UserMeEditProfile)
 	userRoute.Add("GET", ":userID", userController.UserGetByUserID)
 	//userRoute.Add("POST", "delete", userController.UserDelete)
 }

@@ -16,7 +16,7 @@ type User struct {
 	Avatar   string    `json:"avatar" gorm:"size:255"`
 	Bio      string    `json:"bio" gorm:"size:255"`
 	Birthday time.Time `json:"birthday" gorm:"not null"`
-	Gender   bool      `json:"gender"`
+	Gender   bool      `json:"gender" gorm:"default:false"`
 	Role     bool      `json:"role" gorm:"default:false"`
 	Active   bool      `json:"active" gorm:"default:true"`
 
