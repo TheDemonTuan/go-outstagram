@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"outstagram/common"
 	"outstagram/models/entity"
+	"outstagram/models/req"
 	"outstagram/services"
 )
 
@@ -58,4 +59,19 @@ func (u *UserController) UserMeUploadAvatar(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Avatar uploaded successfully", uploadResult.SecureURL)
+}
+
+func (u *UserController) UserMeEditProfile(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+
+	bodyData, err := common.Validator[req.UserMeUpdate](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := u.userService.UserMeEditProfile(rawUserID, bodyData); err != nil {
+		return err
+	}
+	return common.CreateResponse(ctx, fiber.StatusOK, "Profile updated", bodyData)
+
 }

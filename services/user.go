@@ -10,6 +10,7 @@ import (
 	"os"
 	"outstagram/common"
 	"outstagram/models/entity"
+	"outstagram/models/req"
 	"strings"
 )
 
@@ -184,6 +185,39 @@ func (u *UserService) UserUnbanByUserID(userID string) error {
 	user.Active = true
 
 	if err := common.DBConn.Save(&user).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	return nil
+}
+
+func (u *UserService) UserMeEditProfile(userID string, userRecord *req.UserMeUpdate) error {
+	var user entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	var existingUser entity.User
+	if err := common.DBConn.Where("username = ?", userRecord.Username).First(&existingUser).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusInternalServerError, "Error while querying username")
+		}
+	} else {
+		if existingUser.ID != user.ID {
+			return fiber.NewError(fiber.StatusBadRequest, "Username already exists")
+		}
+	}
+
+	user.Username = userRecord.Username
+	user.FullName = userRecord.FullName
+	user.Birthday = userRecord.Birthday
+	user.Bio = userRecord.Bio
+	user.Gender = userRecord.Gender
+
+	if err := common.DBConn.Model(&user).Omit("phone").Updates(&user).Error; err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
 	}
 
