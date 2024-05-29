@@ -6,6 +6,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+	"log"
 	"mime/multipart"
 	"os"
 	"outstagram/common"
@@ -216,6 +217,14 @@ func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.
 	if userRecord.Gender == "male" {
 		genderConvert = false
 	}
+
+	log.Println(userInfo.Username == userRecord.Username)
+	log.Println(userInfo.FullName == userRecord.FullName)
+	log.Println(userInfo.Birthday.Format("2006-01-02") == userRecord.Birthday.Format("2006-01-02"))
+	log.Println(userInfo.Birthday)
+	log.Println(userRecord.Birthday)
+	log.Println(userInfo.Bio == userRecord.Bio)
+	log.Println(userInfo.Gender == genderConvert)
 
 	if userInfo.Username == userRecord.Username && userInfo.FullName == userRecord.FullName && userInfo.Birthday.Format("2006-01-02") == userRecord.Birthday.Format("2006-01-02") && userInfo.Bio == userRecord.Bio && userInfo.Gender == genderConvert {
 		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "No change")

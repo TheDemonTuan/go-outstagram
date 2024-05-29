@@ -81,24 +81,24 @@ var postGetAll = &graphql.Field{
 	},
 }
 
-var postGetAllByUserID = &graphql.Field{
-	Name:        "GetAllPostByUserID",
+var postGetAllByUserName = &graphql.Field{
+	Name:        "GetAllPostByUserName",
 	Type:        graphql.NewList(postTypes),
-	Description: "Get all post by user id",
+	Description: "Get all post by username",
 	Args: graphql.FieldConfigArgument{
-		"id": &graphql.ArgumentConfig{
+		"username": &graphql.ArgumentConfig{
 			Type: graphql.NewNonNull(graphql.String),
 		},
 	},
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-		id, ok := params.Args["id"].(string)
+		username, ok := params.Args["username"].(string)
 		if !ok {
 			return nil, nil
 		}
 
 		var posts []entity.Post
 		postService := services.NewPostService()
-		if err := postService.PostGetAllByUserID(id, &posts); err != nil {
+		if err := postService.PostGetAllByUserName(username, &posts); err != nil {
 			return nil, err
 		}
 

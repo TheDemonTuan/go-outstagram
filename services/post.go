@@ -39,6 +39,22 @@ func (p *PostService) PostGetAllByUserID(userID string, posts *[]entity.Post) er
 	return nil
 }
 
+func (p *PostService) PostGetAllByUserName(username string, posts *[]entity.Post) error {
+	var user entity.User
+	if err := common.DBConn.Where("username = ?", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error while querying user")
+	}
+
+	if err := common.DBConn.Where("user_id = ?", user.ID).Find(&posts).Error; err != nil {
+		return errors.New("error while querying post")
+	}
+
+	return nil
+}
+
 func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	if err := common.DBConn.Find(&posts).Error; err != nil {
 		return err

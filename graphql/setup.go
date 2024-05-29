@@ -13,11 +13,11 @@ type Input struct {
 
 func generateSchema() graphql.Schema {
 	fields := graphql.Fields{
-		"posts":                postGetAll,
-		"posts_by_user_id":     postGetAllByUserID,
-		"search_user":          userSearchByUsernameOrFullName,
-		"get_user_by_user_id":  userGetByUserID,
-		"get_user_by_username": userGetByUserName,
+		"posts":                 postGetAll,
+		"get_posts_by_username": postGetAllByUserName,
+		"search_user":           userSearchByUsernameOrFullName,
+		"get_user_by_user_id":   userGetByUserID,
+		"get_user_by_username":  userGetByUserName,
 		//"user":  userGetByUserID,
 	}
 	rootQuery := graphql.ObjectConfig{Name: "Graphql", Fields: fields}
