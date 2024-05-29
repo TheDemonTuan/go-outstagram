@@ -23,6 +23,7 @@ type Input struct {
 func init() {
 	common.LoadEnvVar()
 	common.ConnectDB()
+	common.NewPusherClient()
 	//common.CreateStaticFolder(os.Getenv("STATIC_PATH"))
 }
 

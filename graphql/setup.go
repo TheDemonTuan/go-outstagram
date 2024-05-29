@@ -18,6 +18,7 @@ func generateSchema() graphql.Schema {
 		"search_user":           userSearchByUsernameOrFullName,
 		"get_user_by_user_id":   userGetByUserID,
 		"get_user_by_username":  userGetByUserName,
+		"get_user_suggestions":  userSuggestions,
 		//"user":  userGetByUserID,
 	}
 	rootQuery := graphql.ObjectConfig{Name: "Graphql", Fields: fields}

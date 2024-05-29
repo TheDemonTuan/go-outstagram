@@ -134,3 +134,36 @@ var userGetByUserName = &graphql.Field{
 		return user, nil
 	},
 }
+
+var userSuggestions = &graphql.Field{
+	Name:        "UserSuggestions",
+	Type:        graphql.NewList(userTypes),
+	Description: "Get user suggestions",
+	Args: graphql.FieldConfigArgument{
+		"count": &graphql.ArgumentConfig{
+			Type: graphql.NewNonNull(graphql.Int),
+		},
+		"userID": &graphql.ArgumentConfig{
+			Type: graphql.NewNonNull(graphql.String),
+		},
+	},
+	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+		count, ok := params.Args["count"].(int)
+		if !ok {
+			return nil, nil
+		}
+
+		userID, ok := params.Args["userID"].(string)
+		if !ok {
+			return nil, nil
+		}
+
+		var users []entity.User
+		userService := services.NewUserService()
+		if err := userService.UserSuggestions(userID, count, &users); err != nil {
+			return nil, err
+		}
+
+		return users, nil
+	},
+}

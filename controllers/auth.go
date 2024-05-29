@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"outstagram/common"
 	"outstagram/models/req"
@@ -76,6 +77,11 @@ func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
 
+	data := map[string]string{"message": "hello " + user.FullName}
+
+	if err := common.PusherClient.Trigger("my-channel", "my-event", data); err != nil {
+		fmt.Println(err.Error())
+	}
 	return common.CreateResponse(ctx, fiber.StatusOK, "User is verified", fiber.Map{
 		"user": user,
 	})
