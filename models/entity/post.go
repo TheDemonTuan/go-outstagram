@@ -14,7 +14,7 @@ type Post struct {
 	IsHideComment bool      `json:"is_hide_comment" gorm:"default:false"`
 	Active        bool      `json:"active" gorm:"default:true"`
 
-	PostFiles    []PostFile    `json:"post_images" gorm:"foreignKey:PostID;references:ID"`
+	PostFiles    []PostFile    `json:"post_files" gorm:"foreignKey:PostID;references:ID"`
 	PostLikes    []PostLike    `json:"post_likes" gorm:"foreignKey:PostID;references:ID"`
 	PostComments []PostComment `json:"post_comments" gorm:"foreignKey:PostID;references:ID"`
 
