@@ -30,7 +30,7 @@ func (u *UserController) UserGetByUserID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Params("userID")
 	var userRecord entity.User
 
-	if err := u.userService.UserGetByUserID(rawUserID, &userRecord); err != nil {
+	if err := u.userService.UserGetByID(rawUserID, &userRecord); err != nil {
 		return err
 	}
 

@@ -38,7 +38,7 @@ func (a *AdminController) AdminBanUserByUserID(ctx *fiber.Ctx) error {
 	userID := ctx.Params("userID")
 
 	var userRecord entity.User
-	if err := a.userService.UserGetByUserID(userID, &userRecord); err != nil {
+	if err := a.userService.UserGetByID(userID, &userRecord); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (a *AdminController) AdminUnbanUserByUserID(ctx *fiber.Ctx) error {
 	userID := ctx.Params("userID")
 
 	var userRecord entity.User
-	if err := a.userService.UserGetByUserID(userID, &userRecord); err != nil {
+	if err := a.userService.UserGetByID(userID, &userRecord); err != nil {
 		return err
 	}
 

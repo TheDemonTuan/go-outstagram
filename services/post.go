@@ -39,7 +39,7 @@ func (p *PostService) PostGetAllByUserID(userID string, posts *[]entity.Post) er
 	return nil
 }
 
-func (p *PostService) PostGetAllByUserName(username string, posts *[]entity.Post) error {
+func (p *PostService) PostGetAllByUserName(username string, posts interface{}) error {
 	var user entity.User
 	if err := common.DBConn.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -48,7 +48,7 @@ func (p *PostService) PostGetAllByUserName(username string, posts *[]entity.Post
 		return errors.New("error while querying user")
 	}
 
-	if err := common.DBConn.Where("user_id = ?", user.ID).Find(&posts).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ?", user.ID).Find(posts).Error; err != nil {
 		return errors.New("error while querying post")
 	}
 
@@ -345,7 +345,7 @@ func (p *PostService) PostGetAllCommentByPostID(postID string) ([]req.PostCommen
 	var resultComments []req.PostComment
 	for _, c := range commentsWithUsers {
 		resultComments = append(resultComments, req.PostComment{
-			ID:        c.PostComment.ID,
+			ID:        c.PostComment.ID.String(),
 			Content:   c.PostComment.Content,
 			CreatedAt: c.PostComment.CreatedAt,
 			User: req.UserComment{

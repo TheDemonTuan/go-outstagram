@@ -2,7 +2,7 @@ package middleware
 
 import (
 	jwtware "github.com/gofiber/contrib/jwt"
-	fiber "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"os"
 	"outstagram/common"
@@ -28,7 +28,7 @@ func jwtSuccess(c *fiber.Ctx) error {
 
 	userService := services.NewUserService()
 	var userRecord entity.User
-	if err := userService.UserGetByUserID(userID, &userRecord); err != nil {
+	if err := userService.UserGetByID(userID, &userRecord); err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
 
@@ -43,9 +43,25 @@ func jwtSuccess(c *fiber.Ctx) error {
 }
 
 func jwtError(c *fiber.Ctx, err error) error {
+	if c.Path() == "/graphql" || c.Path() == "/graphql/playground" {
+		return c.Next()
+	}
+
 	if err.Error() == "Missing or malformed JWT" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing or malformed JWT")
 	}
 
 	return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+}
+
+func GraphqlHandler(c *fiber.Ctx) error {
+	currentUserID, isOK := c.Locals(common.UserIDLocalKey).(string)
+
+	if !isOK {
+		c.Context().SetUserValue(common.UserInfoLocalKey, nil)
+		return c.Next()
+	}
+	c.Context().SetUserValue(common.UserInfoLocalKey, currentUserID)
+
+	return c.Next()
 }

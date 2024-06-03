@@ -21,19 +21,19 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
-func (u *UserService) UserGetByUserID(userID string, userRecord *entity.User) error {
-	if err := common.DBConn.Where("id = ?", userID).Find(userRecord).Error; err != nil {
+func (u *UserService) UserGetByID(userID string, userRecord interface{}) error {
+	if err := common.DBConn.Model(&entity.User{}).Where("id = ?", userID).Find(userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+			return errors.New("user not found")
 		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+		return errors.New("error while querying user")
 	}
 	return nil
 
 }
 
-func (u *UserService) UserSearchByUsernameOrFullName(keyword string, users *[]entity.User) error {
-	if err := common.DBConn.Where("username LIKE ? OR full_name LIKE ?", "%"+keyword+"%", "%"+keyword+"%").Find(users).Error; err != nil {
+func (u *UserService) UserSearchByUsernameOrFullName(keyword string, users interface{}) error {
+	if err := common.DBConn.Model(&entity.User{}).Where("username LIKE ? OR full_name LIKE ?", "%"+keyword+"%", "%"+keyword+"%").Find(users).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -43,8 +43,8 @@ func (u *UserService) UserSearchByUsernameOrFullName(keyword string, users *[]en
 	return nil
 }
 
-func (u *UserService) UserGetByUserName(username string, userRecord *entity.User) error {
-	if err := common.DBConn.Where("username = ?", username).Find(userRecord).Error; err != nil {
+func (u *UserService) UserGetByUserName(username string, userRecord interface{}) error {
+	if err := common.DBConn.Model(&entity.User{}).Where("username = ?", username).Find(userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -245,9 +245,9 @@ func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.
 	return existingUser, nil
 }
 
-func (u *UserService) UserSuggestions(userID string, count int, users *[]entity.User) error {
-	if err := common.DBConn.Where("id != ?", userID).Order("RANDOM()").Limit(count).Find(&users).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+func (u *UserService) UserSuggestion(userID string, count int, users interface{}) error {
+	if err := common.DBConn.Model(&entity.User{}).Where("id != ?", userID).Order("RANDOM()").Limit(count).Find(users).Error; err != nil {
+		return errors.New("error while querying user")
 	}
 	return nil
 }

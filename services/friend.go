@@ -51,6 +51,9 @@ func (f *FriendService) SendFriendRequest(friendRecord *entity.Friend, fromUserI
 		return fiber.NewError(fiber.StatusBadRequest, "Friend request already sent")
 	}
 
+	friendRecord.FromUserID = uuidFromUserID
+	friendRecord.ToUserID = uuidToUserID
+
 	if isRequestSent && friendRecord.Status == entity.FriendRejected {
 		friendRecord.Status = entity.FriendRequested
 		if err := common.DBConn.Save(&friendRecord).Error; err != nil {
@@ -58,9 +61,6 @@ func (f *FriendService) SendFriendRequest(friendRecord *entity.Friend, fromUserI
 		}
 		return nil
 	}
-
-	friendRecord.FromUserID = uuidFromUserID
-	friendRecord.ToUserID = uuidToUserID
 
 	if err := common.DBConn.Create(&friendRecord).Error; err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -127,24 +127,23 @@ func (f *FriendService) GetFriendList(userID string) ([]entity.Friend, error) {
 	return friendList, nil
 }
 
-func (f *FriendService) GetFriendByUserID(fromUserID, toUserID string) (*entity.Friend, error) {
+func (f *FriendService) GetFriendByUserID(friendRecord *entity.Friend, fromUserID, toUserID string) error {
 	_, err := uuid.Parse(fromUserID)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	_, err = uuid.Parse(toUserID)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	var friend entity.Friend
-	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ?", fromUserID, toUserID).First(&friend).Error; err != nil {
+	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ? or from_user_id = ? AND to_user_id = ?", fromUserID, toUserID, toUserID, fromUserID).First(&friendRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Friend not found")
+			return fiber.NewError(fiber.StatusBadRequest, "Friend not found")
 		}
-		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	return &friend, nil
+	return nil
 }

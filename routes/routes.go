@@ -2,14 +2,12 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"outstagram/graphql"
 	"outstagram/middleware"
 )
 
 func SetupRouter(app *fiber.App) {
-	graphqlRoute := app.Group("graphql")
-	graphqlRoute.Add("GET", "", graphql.Query)
-	graphqlRoute.Add("POST", "", graphql.Mutation)
+	graphqlRoute := app.Group("graphql", middleware.Protected(), middleware.GraphqlHandler)
+	graphqlRouter(graphqlRoute)
 
 	publicAPIRoute := app.Group("api")
 	authRouter(publicAPIRoute)

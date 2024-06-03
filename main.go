@@ -14,12 +14,6 @@ import (
 	"outstagram/routes"
 )
 
-type Input struct {
-	Query         string                 `query:"query"`
-	OperationName string                 `query:"operationName"`
-	Variables     map[string]interface{} `query:"variables"`
-}
-
 func init() {
 	common.LoadEnvVar()
 	common.ConnectDB()

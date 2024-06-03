@@ -1,10 +1,8 @@
 package controllers
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/services"
@@ -22,8 +20,8 @@ func NewFriendController(friendService *services.FriendService) *FriendControlle
 
 func (f *FriendController) FriendSendRequest(ctx *fiber.Ctx) error {
 	// Get current user
-	currentUserID, currenUserIdIsOk := ctx.Locals(common.UserIDLocalKey).(string)
-	if !currenUserIdIsOk {
+	currentUserInfo, currenUserInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !currenUserInfoIsOk {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
 	}
 
@@ -31,20 +29,12 @@ func (f *FriendController) FriendSendRequest(ctx *fiber.Ctx) error {
 	toUserID := ctx.Params("toUserID")
 
 	var friendRecord entity.Friend
-	if err := f.friendService.SendFriendRequest(&friendRecord, currentUserID, toUserID); err != nil {
+	if err := f.friendService.SendFriendRequest(&friendRecord, currentUserInfo.ID.String(), toUserID); err != nil {
 		return err
 	}
 
 	// Push notification
-	var userRecord entity.User
-	if err := common.DBConn.Where("id = ?", toUserID).First(&userRecord).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
-		}
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	data := map[string]string{"message": "" + userRecord.Username + " sent you a friend request"}
+	data := map[string]string{"message": "" + currentUserInfo.Username + " sent you a friend request!", "fromUserID": currentUserInfo.ID.String()}
 
 	if err := common.PusherClient.Trigger(toUserID, "friend-notification", data); err != nil {
 		fmt.Println(err.Error())
@@ -97,8 +87,8 @@ func (f *FriendController) GetFriendByUserID(ctx *fiber.Ctx) error {
 
 	toUserID := ctx.Params("toUserID")
 
-	friendRecord, err := f.friendService.GetFriendByUserID(currentUserID, toUserID)
-	if err != nil {
+	var friendRecord entity.Friend
+	if err := f.friendService.GetFriendByUserID(&friendRecord, currentUserID, toUserID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
