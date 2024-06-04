@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"outstagram/common"
 	"outstagram/models/entity"
@@ -37,7 +36,7 @@ func (f *FriendController) FriendSendRequest(ctx *fiber.Ctx) error {
 	data := map[string]string{"message": "" + currentUserInfo.Username + " sent you a friend request!", "fromUserID": currentUserInfo.ID.String()}
 
 	if err := common.PusherClient.Trigger(toUserID, "friend-notification", data); err != nil {
-		fmt.Println(err.Error())
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Friend request sent", friendRecord)
@@ -45,7 +44,27 @@ func (f *FriendController) FriendSendRequest(ctx *fiber.Ctx) error {
 }
 
 func (f *FriendController) FriendAcceptRequest(ctx *fiber.Ctx) error {
-	return nil
+	currentUserInfo, currenUserInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !currenUserInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	// Get to user
+	toUserID := ctx.Params("toUserID")
+
+	var friendRecord entity.Friend
+	if err := f.friendService.AcceptFriendRequest(&friendRecord, currentUserInfo.ID.String(), toUserID); err != nil {
+		return err
+	}
+
+	// Push notification
+	data := map[string]string{"message": "" + currentUserInfo.Username + " accepted your friend request!", "fromUserID": currentUserInfo.ID.String()}
+
+	if err := common.PusherClient.Trigger(toUserID, "friend-notification", data); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Friend request accepted", friendRecord)
 }
 
 func (f *FriendController) FriendRejectRequest(ctx *fiber.Ctx) error {
@@ -59,7 +78,7 @@ func (f *FriendController) FriendRejectRequest(ctx *fiber.Ctx) error {
 
 	var friendRecord entity.Friend
 	if err := f.friendService.RejectFriendRequest(&friendRecord, currentUserID, toUserID); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		return err
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Friend request rejected", friendRecord)

@@ -80,7 +80,7 @@ func (f *FriendService) RejectFriendRequest(friendRecord *entity.Friend, fromUse
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ?", fromUserID, toUserID).First(&friendRecord).Error; err != nil {
+	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ? OR from_user_id = ? AND to_user_id = ?", fromUserID, toUserID, toUserID, fromUserID).First(&friendRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusBadRequest, "Friend request not found")
 		}
@@ -89,10 +89,6 @@ func (f *FriendService) RejectFriendRequest(friendRecord *entity.Friend, fromUse
 
 	if friendRecord.Status == entity.FriendRejected {
 		return fiber.NewError(fiber.StatusBadRequest, "Friend request already rejected")
-	}
-
-	if friendRecord.Status == entity.FriendAccepted {
-		return fiber.NewError(fiber.StatusBadRequest, "Friend request already accepted")
 	}
 
 	friendRecord.Status = entity.FriendRejected
@@ -142,6 +138,41 @@ func (f *FriendService) GetFriendByUserID(friendRecord *entity.Friend, fromUserI
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusBadRequest, "Friend not found")
 		}
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (f *FriendService) AcceptFriendRequest(friendRecord *entity.Friend, fromUserID, toUserID string) error {
+	_, err := uuid.Parse(fromUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	_, err = uuid.Parse(toUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ?", toUserID, fromUserID).First(&friendRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Friend request not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error when querying friend record")
+	}
+
+	if friendRecord.Status == entity.FriendAccepted {
+		return fiber.NewError(fiber.StatusBadRequest, "Friend request already accepted")
+	}
+
+	if friendRecord.Status == entity.FriendRejected {
+		return fiber.NewError(fiber.StatusBadRequest, "Friend request already rejected")
+	}
+
+	friendRecord.Status = entity.FriendAccepted
+
+	if err := common.DBConn.Save(&friendRecord).Error; err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
