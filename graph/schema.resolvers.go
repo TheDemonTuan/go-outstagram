@@ -40,7 +40,12 @@ func (r *postResolver) PostFiles(ctx context.Context, obj *model.Post) ([]*model
 
 // PostLikes is the resolver for the post_likes field.
 func (r *postResolver) PostLikes(ctx context.Context, obj *model.Post) ([]*model.PostLike, error) {
-	panic(fmt.Errorf("not implemented: PostLikes - post_likes"))
+	var postLikeRecords []*model.PostLike
+	if err := r.postLikeService.PostLikeGetAllByPostID(obj.ID, &postLikeRecords); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return postLikeRecords, nil
 }
 
 // PostComments is the resolver for the post_comments field.
@@ -96,6 +101,21 @@ func (r *queryResolver) UserSuggestion(ctx context.Context, count int) ([]*model
 func (r *queryResolver) PostByUsername(ctx context.Context, username string) ([]*model.Post, error) {
 	var posts []*model.Post
 	if err := r.postService.PostGetAllByUserName(username, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
+// PostHomePage is the resolver for the postHomePage field.
+func (r *queryResolver) PostHomePage(ctx context.Context, count int) ([]*model.Post, error) {
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
+	if !isOk {
+		return nil, gqlerror.Errorf("user not found")
+	}
+
+	var posts []*model.Post
+	if err := r.postService.PostGetHomePage(currentUserID, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 

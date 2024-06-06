@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm/logger"
 	"log"
 	"os"
-	"outstagram/models/entity"
 )
 
 var DBConn *gorm.DB
@@ -36,9 +35,9 @@ func runMigrate() {
 		//if err := DBConn.Migrator().DropTable(&entity.Friend{}, &entity.User{},&en); err != nil {
 		//	panic(err)
 		//}
-		if err := DBConn.AutoMigrate(&entity.PostFile{}, &entity.PostComment{}); err != nil {
-			panic(err)
-		}
+		//if err := DBConn.AutoMigrate(&entity.PostFile{}, &entity.PostComment{}); err != nil {
+		//	panic(err)
+		//}
 
 		log.Println("Success to migrate")
 	}

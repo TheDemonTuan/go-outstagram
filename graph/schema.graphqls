@@ -93,9 +93,9 @@ type Query {
     userByUsername(username: String!): User!
     userSearch(keyword: String!): [UserSearch!]!
     userSuggestion(count: Int!): [UserSuggestion!]!
-    postByUsername(username: String!): [Post!]!
     # posts
-
+    postByUsername(username: String!): [Post!]!
+    postHomePage(count: Int!): [Post!]!
 }
 
 input NewTodo {

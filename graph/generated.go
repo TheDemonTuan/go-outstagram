@@ -102,6 +102,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		PostByUsername func(childComplexity int, username string) int
+		PostHomePage   func(childComplexity int, count int) int
 		UserByUsername func(childComplexity int, username string) int
 		UserSearch     func(childComplexity int, keyword string) int
 		UserSuggestion func(childComplexity int, count int) int
@@ -157,6 +158,7 @@ type QueryResolver interface {
 	UserSearch(ctx context.Context, keyword string) ([]*model.UserSearch, error)
 	UserSuggestion(ctx context.Context, count int) ([]*model.UserSuggestion, error)
 	PostByUsername(ctx context.Context, username string) ([]*model.Post, error)
+	PostHomePage(ctx context.Context, count int) ([]*model.Post, error)
 }
 
 type executableSchema struct {
@@ -453,6 +455,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.PostByUsername(childComplexity, args["username"].(string)), true
+
+	case "Query.postHomePage":
+		if e.complexity.Query.PostHomePage == nil {
+			break
+		}
+
+		args, err := ec.field_Query_postHomePage_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PostHomePage(childComplexity, args["count"].(int)), true
 
 	case "Query.userByUsername":
 		if e.complexity.Query.UserByUsername == nil {
@@ -839,6 +853,21 @@ func (ec *executionContext) field_Query_postByUsername_args(ctx context.Context,
 		}
 	}
 	args["username"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_postHomePage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["count"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("count"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["count"] = arg0
 	return args, nil
 }
 
@@ -2897,6 +2926,89 @@ func (ec *executionContext) fieldContext_Query_postByUsername(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_postByUsername_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_postHomePage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_postHomePage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PostHomePage(rctx, fc.Args["count"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Post)
+	fc.Result = res
+	return ec.marshalNPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPostᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_postHomePage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Post_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_Post_user_id(ctx, field)
+			case "caption":
+				return ec.fieldContext_Post_caption(ctx, field)
+			case "is_hide_like":
+				return ec.fieldContext_Post_is_hide_like(ctx, field)
+			case "is_hide_comment":
+				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "active":
+				return ec.fieldContext_Post_active(ctx, field)
+			case "user":
+				return ec.fieldContext_Post_user(ctx, field)
+			case "post_files":
+				return ec.fieldContext_Post_post_files(ctx, field)
+			case "post_likes":
+				return ec.fieldContext_Post_post_likes(ctx, field)
+			case "post_comments":
+				return ec.fieldContext_Post_post_comments(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Post_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Post_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Post_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Post", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_postHomePage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -6410,6 +6522,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_postByUsername(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "postHomePage":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_postHomePage(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

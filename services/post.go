@@ -359,3 +359,28 @@ func (p *PostService) PostGetAllCommentByPostID(postID string) ([]req.PostCommen
 
 	return resultComments, nil
 }
+
+func (p *PostService) PostGetHomePage(userID string, posts interface{}) error {
+	var friendRecords []entity.Friend
+
+	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", userID, userID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
+		return errors.New("error while querying followings")
+	}
+
+	var friends []string
+	for _, f := range friendRecords {
+		if f.FromUserID.String() == userID {
+			friends = append(friends, f.ToUserID.String())
+		} else {
+			friends = append(friends, f.FromUserID.String())
+		}
+	}
+
+	friends = append(friends, userID)
+
+	if err := common.DBConn.Model(&entity.Post{}).Where("user_id IN ?", friends).Order("created_at desc").Order(gorm.Expr("rand()")).Find(posts).Error; err != nil {
+		return errors.New("error while querying posts")
+	}
+
+	return nil
+}
