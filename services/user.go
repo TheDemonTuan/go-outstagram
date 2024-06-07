@@ -356,3 +356,30 @@ func (u *UserService) UserMeEditEmailSaveToDB(ctx *fiber.Ctx, email string) erro
 	return nil
 
 }
+
+func (u *UserService) UserMeDeleteAvatarSaveToDB(ctx *fiber.Ctx) error {
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	if userInfo.Avatar == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "No avatar to delete")
+	}
+
+	publicID, err := common.GetPublicIDFromURL("users/avatar", userInfo.Avatar)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while getting public ID")
+	}
+
+	if err := u.UserMeDeleteAvatar(publicID); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while deleting file")
+	}
+
+	userInfo.Avatar = ""
+
+	if err := common.DBConn.Save(&userInfo).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	ctx.Locals(common.UserInfoLocalKey, userInfo)
+
+	return nil
+}

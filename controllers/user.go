@@ -136,3 +136,15 @@ func (u *UserController) UserMeEditEmail(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Email updated", userInfo.Email)
 
 }
+
+func (u *UserController) UserMeDeleteAvatar(ctx *fiber.Ctx) error {
+
+	if err := u.userService.UserMeDeleteAvatarSaveToDB(ctx); err != nil {
+		return err
+	}
+
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Avatar deleted", userInfo.Avatar)
+
+}
