@@ -5,6 +5,7 @@ import (
 	"outstagram/common"
 	"outstagram/models/req"
 	"outstagram/services"
+	"strings"
 )
 
 type AuthController struct {
@@ -76,7 +77,18 @@ func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
 
+	authHeader := ctx.Get("Authorization")
+	if authHeader == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Authorization header is required")
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token format")
+	}
+
 	return common.CreateResponse(ctx, fiber.StatusOK, "User is verified", fiber.Map{
-		"user": user,
+		"user":  user,
+		"token": parts[1],
 	})
 }
