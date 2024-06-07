@@ -138,7 +138,7 @@ func (u *UserService) UserMeSaveAvatarToDB(userID string, secureURL string) erro
 	oldAvatar := user.Avatar
 	user.Avatar = secureURL
 
-	if err := common.DBConn.Save(&user).Error; err != nil {
+	if err := common.DBConn.Omit("phone").Save(&user).Error; err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
 	}
 
@@ -238,7 +238,7 @@ func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.
 	userInfo.Bio = userRecord.Bio
 	userInfo.Gender = genderConvert
 
-	if err := common.DBConn.Save(&userInfo).Error; err != nil {
+	if err := common.DBConn.Omit("phone").Save(&userInfo).Error; err != nil {
 		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
 	}
 
@@ -251,3 +251,18 @@ func (u *UserService) UserSuggestion(userID string, count int, users interface{}
 	}
 	return nil
 }
+
+func (u *UserService) UserMeEditPrivateSaveToDB(ctx *fiber.Ctx) error {
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	userInfo.IsPrivate = !userInfo.IsPrivate
+
+	if err := common.DBConn.Omit("phone").Save(&userInfo).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	ctx.Locals(common.UserInfoLocalKey, userInfo)
+
+	return nil
+}
+

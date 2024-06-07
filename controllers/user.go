@@ -78,3 +78,16 @@ func (u *UserController) UserMeEditProfile(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Profile updated", user)
 
 }
+
+func (u *UserController) UserMeEditPrivate(ctx *fiber.Ctx) error {
+
+	if err := u.userService.UserMeEditPrivateSaveToDB(ctx); err != nil {
+		return err
+	}
+
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Private updated", userInfo.IsPrivate)
+
+}
+
