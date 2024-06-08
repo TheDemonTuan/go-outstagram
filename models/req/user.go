@@ -9,3 +9,11 @@ type UserMeUpdate struct {
 	Bio      string    `json:"bio" validate:"max=150"`
 	Gender   string    `json:"gender" validate:"required,alphanum,min=4,max=6"`
 }
+
+type UserMeUpdatePhone struct {
+	Phone string `json:"phone" validate:"required,numeric,min=10,max=15"`
+}
+
+type UserMeUpdateEmail struct {
+	Email string `json:"email" validate:"required,email,min=5,max=100"`
+}

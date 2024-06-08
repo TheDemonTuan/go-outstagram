@@ -92,19 +92,12 @@ func (u *UserController) UserMeEditPrivate(ctx *fiber.Ctx) error {
 }
 
 func (u *UserController) UserMeEditPhone(ctx *fiber.Ctx) error {
-
-	var userRecord entity.User
-	if err := ctx.BodyParser(&userRecord); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Failed to parse request body")
+	bodyData, err := common.RequestBodyValidator[req.UserMeUpdatePhone](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	phone := userRecord.Phone
-
-	if err := u.userService.UserMeEditPhoneValidateRequest(phone); err != nil {
-		return err
-	}
-
-	if err := u.userService.UserMeEditPhoneSaveToDB(ctx, phone); err != nil {
+	if err := u.userService.UserMeEditPhoneSaveToDB(ctx, bodyData.Phone); err != nil {
 		return err
 	}
 
@@ -115,26 +108,18 @@ func (u *UserController) UserMeEditPhone(ctx *fiber.Ctx) error {
 }
 
 func (u *UserController) UserMeEditEmail(ctx *fiber.Ctx) error {
-
-	var userRecord entity.User
-	if err := ctx.BodyParser(&userRecord); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Failed to parse request body")
+	bodyData, err := common.RequestBodyValidator[req.UserMeUpdateEmail](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	email := userRecord.Email
-
-	if err := u.userService.UserMeEditEmailValidateRequest(email); err != nil {
-		return err
-	}
-
-	if err := u.userService.UserMeEditEmailSaveToDB(ctx, email); err != nil {
+	if err := u.userService.UserMeEditEmailSaveToDB(ctx, bodyData.Email); err != nil {
 		return err
 	}
 
 	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Email updated", userInfo.Email)
-
 }
 
 func (u *UserController) UserMeDeleteAvatar(ctx *fiber.Ctx) error {

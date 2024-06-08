@@ -13,12 +13,12 @@ func userRouter(r fiber.Router) {
 	userController := controllers.NewUserController(userService)
 
 	userRoute.Add("GET", "me", userController.UserGetMe)
+	userRoute.Add("GET", ":userID", userController.UserGetByUserID)
 	userRoute.Add("PATCH", "me/avatar", userController.UserMeUploadAvatar)
 	userRoute.Add("PATCH", "me/profile", userController.UserMeEditProfile)
 	userRoute.Add("PATCH", "me/private", userController.UserMeEditPrivate)
 	userRoute.Add("PATCH", "me/phone", userController.UserMeEditPhone)
 	userRoute.Add("PATCH", "me/email", userController.UserMeEditEmail)
-	userRoute.Add("GET", ":userID", userController.UserGetByUserID)
 	userRoute.Add("DELETE", "me/avatar", userController.UserMeDeleteAvatar)
 	//userRoute.Add("POST", "delete", userController.UserDelete)
 }

@@ -266,33 +266,24 @@ func (u *UserService) UserMeEditPrivateSaveToDB(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (u *UserService) UserMeEditPhoneValidateRequest(phone string) error {
-	match, err := regexp.Match(`^\+?[0-9]{8,15}$`, []byte(phone))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid phone number")
-	}
-
-	if !match {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid phone number")
-	}
-
-	return nil
-}
-
 func (u *UserService) UserMeEditPhoneSaveToDB(ctx *fiber.Ctx, phone string) error {
 	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 
+	if userInfo.Phone == phone {
+		return fiber.NewError(fiber.StatusBadRequest, "New phone is the same as the current phone")
+	}
+
 	var existingUser entity.User
 
-	if err := common.DBConn.Where("phone = ?", phone).First(&existingUser).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying phone")
+	if err := common.DBConn.Where("phone = ? and id != ?", phone, userInfo.ID).Select("phone").First(&existingUser).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusInternalServerError, "Error while querying phone")
+		}
 	}
 
-	if existingUser.ID != userInfo.ID && existingUser.Phone != "" {
+	if existingUser.Phone != "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Phone number already exists")
 	}
-
-	print(existingUser.Phone)
 
 	userInfo.Phone = phone
 
@@ -305,30 +296,7 @@ func (u *UserService) UserMeEditPhoneSaveToDB(ctx *fiber.Ctx, phone string) erro
 	return nil
 }
 
-func (u *UserService) UserMeEditEmailValidateRequest(email string) error {
-
-	if len(email) < 5 {
-		return fiber.NewError(fiber.StatusBadRequest, "Email is too short")
-	}
-
-	if len(email) > 100 {
-		return fiber.NewError(fiber.StatusBadRequest, "Email is too long")
-	}
-
-	match, err := regexp.Match(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`, []byte(email))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Error occurred while validating email")
-	}
-
-	if !match {
-		return fiber.NewError(fiber.StatusBadRequest, "Email format is invalid")
-	}
-
-	return nil
-}
-
 func (u *UserService) UserMeEditEmailSaveToDB(ctx *fiber.Ctx, email string) error {
-
 	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 
 	if userInfo.Email == email {
@@ -336,12 +304,11 @@ func (u *UserService) UserMeEditEmailSaveToDB(ctx *fiber.Ctx, email string) erro
 	}
 
 	var existingUser entity.User
-
-	if err := common.DBConn.Where("email = ?", email).First(&existingUser).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := common.DBConn.Where("email = ? and id != ?", email, userInfo.ID).First(&existingUser).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying email")
 	}
 
-	if existingUser.ID != userInfo.ID && existingUser.Email != "" {
+	if existingUser.Email != "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Email already exists")
 	}
 
@@ -354,7 +321,6 @@ func (u *UserService) UserMeEditEmailSaveToDB(ctx *fiber.Ctx, email string) erro
 	ctx.Locals(common.UserInfoLocalKey, userInfo)
 
 	return nil
-
 }
 
 func (u *UserService) UserMeDeleteAvatarSaveToDB(ctx *fiber.Ctx) error {

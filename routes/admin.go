@@ -7,13 +7,11 @@ import (
 )
 
 func adminRouter(r fiber.Router) {
-	adminRoute := r.Group("admin")
-
 	adminService := services.NewAdminService()
 	postService := services.NewPostService()
 	userService := services.NewUserService()
 	adminController := controllers.NewAdminController(adminService, postService, userService)
 
-	adminRoute.Add("DELETE", "posts/:postID", adminController.AdminDeletePostByPostID)
-	adminRoute.Add("POST", "ban/users/:userID", adminController.AdminBanUserByUserID)
+	r.Add("DELETE", "posts/:postID", adminController.AdminDeletePostByPostID)
+	r.Add("POST", "ban/users/:userID", adminController.AdminBanUserByUserID)
 }
