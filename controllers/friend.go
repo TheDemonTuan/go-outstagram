@@ -108,7 +108,7 @@ func (f *FriendController) GetFriendByUserID(ctx *fiber.Ctx) error {
 
 	var friendRecord entity.Friend
 	if err := f.friendService.GetFriendByUserID(&friendRecord, currentUserID, toUserID); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return err
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Friend record", friendRecord)

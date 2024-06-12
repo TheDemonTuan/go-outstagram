@@ -12,5 +12,6 @@ var Handler = handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: &Re
 func WrapHandler(f func(http.ResponseWriter, *http.Request)) func(ctx *fiber.Ctx) {
 	return func(ctx *fiber.Ctx) {
 		fasthttpadaptor.NewFastHTTPHandler(http.HandlerFunc(f))(ctx.Context())
+		ctx.Set("Content-Type", "application/graphql-response+json")
 	}
 }
