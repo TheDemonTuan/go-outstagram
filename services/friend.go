@@ -178,3 +178,43 @@ func (f *FriendService) AcceptFriendRequest(friendRecord *entity.Friend, fromUse
 
 	return nil
 }
+
+func (f *FriendService) GetAllFriendsByUserName(userName string, friends interface{}) error {
+	var user entity.User
+	if err := common.DBConn.Select("id").Where("username = ?", userName).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error when querying user")
+	}
+
+	if err := common.DBConn.Model(&entity.Friend{}).Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", user.ID.String(), user.ID.String(), entity.FriendAccepted).Find(friends).Error; err != nil {
+		return errors.New("error when querying friends")
+	}
+
+	return nil
+}
+
+func filterFriend(friends []entity.Friend, userID string) []uuid.UUID {
+	var friendList []uuid.UUID
+	for _, friend := range friends {
+		if friend.FromUserID.String() == userID {
+			friendList = append(friendList, friend.ToUserID)
+		} else {
+			friendList = append(friendList, friend.FromUserID)
+		}
+	}
+
+	return friendList
+}
+
+func filterFriendByStatus(friends []entity.Friend, userID string, status entity.FriendStatus) []entity.Friend {
+	var friendList []entity.Friend
+	for _, friend := range friends {
+		if friend.Status == status {
+			friendList = append(friendList, friend)
+		}
+	}
+
+	return friendList
+}

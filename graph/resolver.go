@@ -13,6 +13,7 @@ type Resolver struct {
 	postService     services.PostService
 	postFileService services.PostFileService
 	postLikeService services.PostLikeService
+	friendService   services.FriendService
 	//postCommentService services.PostCommentService
 	//postLikeService services.PostLikeService
 }

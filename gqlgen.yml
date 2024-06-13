@@ -95,3 +95,17 @@ models:
         resolver: true
       user:
         resolver: true
+  UserProfile:
+    fields:
+      user:
+        resolver: true
+      posts:
+        resolver: true
+      friends:
+        resolver: true
+  Friend:
+    fields:
+      from_user_info:
+        resolver: true
+      to_user_info:
+        resolver: true

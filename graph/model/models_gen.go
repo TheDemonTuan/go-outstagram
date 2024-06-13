@@ -46,9 +46,8 @@ type Query struct {
 }
 
 type User struct {
-	ID        *string `json:"id,omitempty"`
+	ID        string  `json:"id"`
 	Username  *string `json:"username,omitempty"`
-	Password  *string `json:"password,omitempty"`
 	FullName  *string `json:"full_name,omitempty"`
 	Email     *string `json:"email,omitempty"`
 	Phone     *string `json:"phone,omitempty"`

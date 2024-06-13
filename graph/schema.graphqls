@@ -3,9 +3,8 @@
 # https://gqlgen.com/getting-started/
 
 type User {
-    id: ID
+    id: ID!
     username: String
-    password: String
     full_name: String
     email: String
     phone: String
@@ -88,9 +87,31 @@ type PostComment {
     deleted_at: String
 }
 
+type UserProfile {
+    username: String!
+    user: User!
+    posts: [Post!]!
+    friends: [Friend!]!
+}
+
+type Friend {
+    id: ID!
+    from_user_id: ID!
+    to_user_id: ID!
+    status: Int
+
+    from_user_info: User
+    to_user_info: User
+
+    created_at: String
+    updated_at: String
+    deleted_at: String
+}
+
 type Query {
     # users
     userByUsername(username: String!): User!
+    userProfile(username: String!): UserProfile!
     userSearch(keyword: String!): [UserSearch!]!
     userSuggestion(count: Int!): [UserSuggestion!]!
     # posts
