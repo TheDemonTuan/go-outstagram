@@ -13,7 +13,7 @@ func NewPostLikeService() *PostLikeService {
 }
 
 func (pl *PostLikeService) PostLikeGetAllByPostID(postID string, postLikes interface{}) error {
-	if err := common.DBConn.Model(&entity.PostLike{}).Where("post_id = ?", postID).Find(postLikes).Error; err != nil {
+	if err := common.DBConn.Model(&entity.PostLike{}).Where("post_id = ? AND is_liked = ?", postID, true).Find(postLikes).Error; err != nil {
 		return errors.New("error when getting post likes by post id")
 	}
 

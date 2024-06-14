@@ -3,7 +3,7 @@ module outstagram
 go 1.22
 
 require (
-	github.com/99designs/gqlgen v0.17.48
+	github.com/99designs/gqlgen v0.17.49
 	github.com/bytedance/sonic v1.11.8
 	github.com/cloudinary/cloudinary-go/v2 v2.7.0
 	github.com/go-playground/validator/v10 v10.22.0
@@ -14,7 +14,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pusher/pusher-http-go/v5 v5.1.1
 	github.com/valyala/fasthttp v1.54.0
-	github.com/vektah/gqlparser/v2 v2.5.13
+	github.com/vektah/gqlparser/v2 v2.5.16
 	golang.org/x/crypto v0.24.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.10
