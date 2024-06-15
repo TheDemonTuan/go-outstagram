@@ -108,6 +108,45 @@ type Friend {
     deleted_at: String
 }
 
+type Inbox {
+    id: ID!
+    from_user_id: ID!
+    to_user_id: ID!
+    message: String
+    is_read: Boolean
+
+    files: [InboxFile]
+
+    from_user_info: User
+    to_user_info: User
+
+    created_at: String
+    updated_at: String
+    deleted_at: String
+}
+
+type InboxFile {
+    id: ID!
+    inbox_id: ID!
+    type: String
+    url: String
+    active: Boolean
+
+    created_at: String
+    updated_at: String
+    deleted_at: String
+}
+
+type InboxGetAllBubble {
+    username: String!
+    full_name: String!
+    avatar: String!
+    last_message: String!
+    is_read: Boolean!
+
+    created_at: String!
+}
+
 type Query {
     # users
     userByUsername(username: String!): User!
@@ -117,13 +156,16 @@ type Query {
     # posts
     postByUsername(username: String!): [Post!]!
     postHomePage(count: Int!): [Post!]!
+    #
+    inboxGetByUsername(username: String!): [Inbox!]!
+    inboxGetAllBubble: [InboxGetAllBubble!]!
 }
 
-input NewTodo {
-    text: String!
-    userId: String!
-}
-
-type Mutation {
-    createTodo(input: NewTodo!): User!
-}
+#input NewTodo {
+#    text: String!
+#    userId: String!
+#}
+#
+#type Mutation {
+#    createTodo(input: NewTodo!): User!
+#}

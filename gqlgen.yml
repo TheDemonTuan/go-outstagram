@@ -109,3 +109,11 @@ models:
         resolver: true
       to_user_info:
         resolver: true
+  Inbox:
+    fields:
+      from_user_info:
+        resolver: true
+      to_user_info:
+        resolver: true
+      files:
+        resolver: true

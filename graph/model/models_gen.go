@@ -2,12 +2,24 @@
 
 package model
 
-type Mutation struct {
+type InboxFile struct {
+	ID        string  `json:"id"`
+	InboxID   string  `json:"inbox_id"`
+	Type      *string `json:"type,omitempty"`
+	URL       *string `json:"url,omitempty"`
+	Active    *bool   `json:"active,omitempty"`
+	CreatedAt *string `json:"created_at,omitempty"`
+	UpdatedAt *string `json:"updated_at,omitempty"`
+	DeletedAt *string `json:"deleted_at,omitempty"`
 }
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+type InboxGetAllBubble struct {
+	Username    string `json:"username"`
+	Avatar      string `json:"avatar"`
+	FullName    string `json:"full_name"`
+	LastMessage string `json:"last_message"`
+	IsRead      bool   `json:"is_read"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type PostComment struct {

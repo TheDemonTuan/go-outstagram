@@ -16,6 +16,7 @@ func SetupRouter(app *fiber.App) {
 	userRouter(privateAPIRoute)
 	postRouter(privateAPIRoute)
 	friendRouter(privateAPIRoute)
+	inboxRouter(privateAPIRoute)
 
 	adminAPIRoute := app.Group("api/admin", middleware.Protected(), middleware.IsAdmin)
 	adminRouter(adminAPIRoute)
