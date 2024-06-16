@@ -43,6 +43,7 @@ type Post {
     caption: String!
     is_hide_like: Boolean!
     is_hide_comment: Boolean!
+    privacy: Int!
     active: Boolean!
 
     user: User
@@ -155,7 +156,7 @@ type Query {
     userSuggestion(count: Int!): [UserSuggestion!]!
     # posts
     postByUsername(username: String!): [Post!]!
-    postHomePage(count: Int!): [Post!]!
+    postHomePage(page: Int!): [Post!]!
     #
     inboxGetByUsername(username: String!): [Inbox!]!
     inboxGetAllBubble: [InboxGetAllBubble!]!

@@ -176,14 +176,14 @@ func (r *queryResolver) PostByUsername(ctx context.Context, username string) ([]
 }
 
 // PostHomePage is the resolver for the postHomePage field.
-func (r *queryResolver) PostHomePage(ctx context.Context, count int) ([]*model.Post, error) {
+func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Post, error) {
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 	if !isOk {
 		return nil, gqlerror.Errorf("user not found")
 	}
 
 	var posts []*model.Post
-	if err := r.postService.PostGetHomePage(currentUserID, &posts); err != nil {
+	if err := r.postService.PostGetHomePage(page, currentUserID, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 

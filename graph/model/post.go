@@ -6,6 +6,7 @@ type Post struct {
 	Caption       string `json:"caption"`
 	IsHideLike    bool   `json:"is_hide_like"`
 	IsHideComment bool   `json:"is_hide_comment"`
+	Privacy       int    `json:"privacy"`
 	Active        bool   `json:"active"`
 
 	User         *User          `json:"user"`

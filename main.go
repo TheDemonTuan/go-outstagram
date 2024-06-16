@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/etag"
+	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"os"
@@ -30,6 +31,7 @@ func main() {
 		EnablePrintRoutes: false,
 		ServerHeader:      "API Outstagram",
 		AppName:           "API Outstagram",
+		BodyLimit:         100 * 1024 * 1024,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			var e *fiber.Error
@@ -56,6 +58,8 @@ func main() {
 	if os.Getenv("APP_ENV") == "development" {
 		app.Use(logger.New())
 	}
+	// Initialize default config
+	app.Use(favicon.New())
 
 	routes.SetupRouter(app)
 	if err := app.Listen(":" + os.Getenv("PORT")); err != nil {

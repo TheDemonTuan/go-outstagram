@@ -107,6 +107,7 @@ type ComplexityRoot struct {
 		PostComments  func(childComplexity int) int
 		PostFiles     func(childComplexity int) int
 		PostLikes     func(childComplexity int) int
+		Privacy       func(childComplexity int) int
 		UpdatedAt     func(childComplexity int) int
 		User          func(childComplexity int) int
 		UserID        func(childComplexity int) int
@@ -148,7 +149,7 @@ type ComplexityRoot struct {
 		InboxGetAllBubble  func(childComplexity int) int
 		InboxGetByUsername func(childComplexity int, username string) int
 		PostByUsername     func(childComplexity int, username string) int
-		PostHomePage       func(childComplexity int, count int) int
+		PostHomePage       func(childComplexity int, page int) int
 		UserByUsername     func(childComplexity int, username string) int
 		UserProfile        func(childComplexity int, username string) int
 		UserSearch         func(childComplexity int, keyword string) int
@@ -218,7 +219,7 @@ type QueryResolver interface {
 	UserSearch(ctx context.Context, keyword string) ([]*model.UserSearch, error)
 	UserSuggestion(ctx context.Context, count int) ([]*model.UserSuggestion, error)
 	PostByUsername(ctx context.Context, username string) ([]*model.Post, error)
-	PostHomePage(ctx context.Context, count int) ([]*model.Post, error)
+	PostHomePage(ctx context.Context, page int) ([]*model.Post, error)
 	InboxGetByUsername(ctx context.Context, username string) ([]*model.Inbox, error)
 	InboxGetAllBubble(ctx context.Context) ([]*model.InboxGetAllBubble, error)
 }
@@ -555,6 +556,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Post.PostLikes(childComplexity), true
 
+	case "Post.privacy":
+		if e.complexity.Post.Privacy == nil {
+			break
+		}
+
+		return e.complexity.Post.Privacy(childComplexity), true
+
 	case "Post.updated_at":
 		if e.complexity.Post.UpdatedAt == nil {
 			break
@@ -778,7 +786,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.PostHomePage(childComplexity, args["count"].(int)), true
+		return e.complexity.Query.PostHomePage(childComplexity, args["page"].(int)), true
 
 	case "Query.userByUsername":
 		if e.complexity.Query.UserByUsername == nil {
@@ -1188,14 +1196,14 @@ func (ec *executionContext) field_Query_postHomePage_args(ctx context.Context, r
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
-	if tmp, ok := rawArgs["count"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("count"))
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
 		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["count"] = arg0
+	args["page"] = arg0
 	return args, nil
 }
 
@@ -2659,50 +2667,6 @@ func (ec *executionContext) fieldContext_InboxGetAllBubble_username(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _InboxGetAllBubble_avatar(ctx context.Context, field graphql.CollectedField, obj *model.InboxGetAllBubble) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_InboxGetAllBubble_avatar(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Avatar, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_InboxGetAllBubble_avatar(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "InboxGetAllBubble",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _InboxGetAllBubble_full_name(ctx context.Context, field graphql.CollectedField, obj *model.InboxGetAllBubble) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_InboxGetAllBubble_full_name(ctx, field)
 	if err != nil {
@@ -2735,6 +2699,50 @@ func (ec *executionContext) _InboxGetAllBubble_full_name(ctx context.Context, fi
 }
 
 func (ec *executionContext) fieldContext_InboxGetAllBubble_full_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "InboxGetAllBubble",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _InboxGetAllBubble_avatar(ctx context.Context, field graphql.CollectedField, obj *model.InboxGetAllBubble) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_InboxGetAllBubble_avatar(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Avatar, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_InboxGetAllBubble_avatar(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "InboxGetAllBubble",
 		Field:      field,
@@ -3094,6 +3102,50 @@ func (ec *executionContext) fieldContext_Post_is_hide_comment(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Post_privacy(ctx context.Context, field graphql.CollectedField, obj *model.Post) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Post_privacy(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Privacy, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Post_privacy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Post",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4795,6 +4847,8 @@ func (ec *executionContext) fieldContext_Query_postByUsername(ctx context.Contex
 				return ec.fieldContext_Post_is_hide_like(ctx, field)
 			case "is_hide_comment":
 				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
 			case "active":
 				return ec.fieldContext_Post_active(ctx, field)
 			case "user":
@@ -4843,7 +4897,7 @@ func (ec *executionContext) _Query_postHomePage(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().PostHomePage(rctx, fc.Args["count"].(int))
+		return ec.resolvers.Query().PostHomePage(rctx, fc.Args["page"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4878,6 +4932,8 @@ func (ec *executionContext) fieldContext_Query_postHomePage(ctx context.Context,
 				return ec.fieldContext_Post_is_hide_like(ctx, field)
 			case "is_hide_comment":
 				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
 			case "active":
 				return ec.fieldContext_Post_active(ctx, field)
 			case "user":
@@ -5032,10 +5088,10 @@ func (ec *executionContext) fieldContext_Query_inboxGetAllBubble(_ context.Conte
 			switch field.Name {
 			case "username":
 				return ec.fieldContext_InboxGetAllBubble_username(ctx, field)
-			case "avatar":
-				return ec.fieldContext_InboxGetAllBubble_avatar(ctx, field)
 			case "full_name":
 				return ec.fieldContext_InboxGetAllBubble_full_name(ctx, field)
+			case "avatar":
+				return ec.fieldContext_InboxGetAllBubble_avatar(ctx, field)
 			case "last_message":
 				return ec.fieldContext_InboxGetAllBubble_last_message(ctx, field)
 			case "is_read":
@@ -5965,6 +6021,8 @@ func (ec *executionContext) fieldContext_UserProfile_posts(_ context.Context, fi
 				return ec.fieldContext_Post_is_hide_like(ctx, field)
 			case "is_hide_comment":
 				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
 			case "active":
 				return ec.fieldContext_Post_active(ctx, field)
 			case "user":
@@ -8596,13 +8654,13 @@ func (ec *executionContext) _InboxGetAllBubble(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "avatar":
-			out.Values[i] = ec._InboxGetAllBubble_avatar(ctx, field, obj)
+		case "full_name":
+			out.Values[i] = ec._InboxGetAllBubble_full_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "full_name":
-			out.Values[i] = ec._InboxGetAllBubble_full_name(ctx, field, obj)
+		case "avatar":
+			out.Values[i] = ec._InboxGetAllBubble_avatar(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8677,6 +8735,11 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "is_hide_comment":
 			out.Values[i] = ec._Post_is_hide_comment(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "privacy":
+			out.Values[i] = ec._Post_privacy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}

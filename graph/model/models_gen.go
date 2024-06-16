@@ -15,8 +15,8 @@ type InboxFile struct {
 
 type InboxGetAllBubble struct {
 	Username    string `json:"username"`
-	Avatar      string `json:"avatar"`
 	FullName    string `json:"full_name"`
+	Avatar      string `json:"avatar"`
 	LastMessage string `json:"last_message"`
 	IsRead      bool   `json:"is_read"`
 	CreatedAt   string `json:"created_at"`

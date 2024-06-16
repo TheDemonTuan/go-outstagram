@@ -360,25 +360,27 @@ func (p *PostService) PostGetAllCommentByPostID(postID string) ([]req.PostCommen
 	return resultComments, nil
 }
 
-func (p *PostService) PostGetHomePage(userID string, posts interface{}) error {
+func (p *PostService) PostGetHomePage(page int, currentUserID string, posts interface{}) error {
 	var friendRecords []entity.Friend
-
-	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", userID, userID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
+	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", currentUserID, currentUserID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
 		return errors.New("error while querying followings")
 	}
 
 	var friends []string
 	for _, f := range friendRecords {
-		if f.FromUserID.String() == userID {
+		if f.FromUserID.String() == currentUserID {
 			friends = append(friends, f.ToUserID.String())
 		} else {
 			friends = append(friends, f.FromUserID.String())
 		}
 	}
 
-	friends = append(friends, userID)
+	friends = append(friends, currentUserID)
 
-	if err := common.DBConn.Model(&entity.Post{}).Where("user_id IN ?", friends).Order("created_at desc").Order(gorm.Expr("rand()")).Find(posts).Error; err != nil {
+	postsPerPage := 2
+	offset := (page - 1) * postsPerPage
+
+	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
 		return errors.New("error while querying posts")
 	}
 
