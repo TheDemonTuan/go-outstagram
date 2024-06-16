@@ -175,6 +175,18 @@ func (r *queryResolver) PostByUsername(ctx context.Context, username string) ([]
 	return posts, nil
 }
 
+// PostByPostID is the resolver for the postByPostId field.
+func (r *queryResolver) PostByPostID(ctx context.Context, postID string) (*model.Post, error) {
+	_, isOk := ctx.Value(common.UserIDLocalKey).(string)
+
+	var post *model.Post
+	if err := r.postService.PostGetAllByPostID(isOk, postID, &post); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return post, nil
+}
+
 // PostHomePage is the resolver for the postHomePage field.
 func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Post, error) {
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)

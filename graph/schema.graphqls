@@ -156,6 +156,7 @@ type Query {
     userSuggestion(count: Int!): [UserSuggestion!]!
     # posts
     postByUsername(username: String!): [Post!]!
+    postByPostId(postID: String!): Post!
     postHomePage(page: Int!): [Post!]!
     #
     inboxGetByUsername(username: String!): [Inbox!]!

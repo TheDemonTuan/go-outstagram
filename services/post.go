@@ -55,6 +55,21 @@ func (p *PostService) PostGetAllByUserName(username string, posts interface{}) e
 	return nil
 }
 
+func (p *PostService) PostGetAllByPostID(isOk bool, postID string, postRecords interface{}) error {
+	if !isOk {
+		if err := common.DBConn.Model(&entity.Post{}).Where("id = ? AND privacy IN ?", postID, []entity.PostPrivacy{entity.PostPublic}).Find(postRecords).Error; err != nil {
+			return errors.New("error while querying post")
+		}
+		return nil
+	}
+
+	if err := common.DBConn.Where("id = ? AND privacy IN ?", postID, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Find(postRecords).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	if err := common.DBConn.Find(&posts).Error; err != nil {
 		return err
