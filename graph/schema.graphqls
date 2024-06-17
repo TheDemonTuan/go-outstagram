@@ -78,14 +78,19 @@ type PostLike {
 }
 
 type PostComment {
-    id: ID
-    post_id: ID
-    user_id: ID
-    content: String
-    active: Boolean
-    created_at: String
-    updated_at: String
-    deleted_at: String
+    id: ID!
+    post_id: ID!
+    user_id: ID!
+    parent_id: ID!
+    content: String!
+    active: Boolean!
+
+    user: User!
+    parent: PostComment
+
+    created_at: String!
+    updated_at: String!
+    deleted_at: String!
 }
 
 type UserProfile {

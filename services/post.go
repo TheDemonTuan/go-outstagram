@@ -11,7 +11,6 @@ import (
 	"os"
 	"outstagram/common"
 	"outstagram/models/entity"
-	"outstagram/models/req"
 	"strings"
 )
 
@@ -326,7 +325,7 @@ func (p *PostService) PostDeleteByPostID(postID string, userID uuid.UUID) error 
 	return nil
 }
 
-func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string) (entity.PostComment, error) {
+func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string, parentID string) (entity.PostComment, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -335,18 +334,27 @@ func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, conte
 		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
 	}
 
-	var userRecord entity.User
-	if err := common.DBConn.Where("id = ?", userID).First(&userRecord).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "User not found")
-		}
-		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
-	}
-
 	newPostComment := entity.PostComment{
 		PostID:  postID,
 		UserID:  userID,
 		Content: strings.Trim(content, " "),
+	}
+
+	if parentID != "" {
+		parentIDUUID, err := uuid.Parse(parentID)
+		if err != nil {
+			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Parent comment ID is invalid")
+		}
+
+		var postCommentRecord entity.PostComment
+		if err := common.DBConn.Where("id = ?", parentID).First(&postCommentRecord).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Parent comment not found")
+			}
+			return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying parent comment")
+		}
+
+		newPostComment.ParentID = parentIDUUID
 	}
 
 	if err := common.DBConn.Create(&newPostComment).Error; err != nil {
@@ -354,39 +362,6 @@ func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, conte
 	}
 
 	return newPostComment, nil
-}
-
-func (p *PostService) PostGetAllCommentByPostID(postID string) ([]req.PostComment, error) {
-	var commentsWithUsers []struct {
-		entity.PostComment
-		entity.User
-	}
-
-	err := common.DBConn.Table("post_comments").
-		Select("post_comments.*, users.*").
-		Joins("JOIN users ON post_comments.user_id = users.id").
-		Where("post_comments.post_id = ?", postID).
-		Find(&commentsWithUsers).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var resultComments []req.PostComment
-	for _, c := range commentsWithUsers {
-		resultComments = append(resultComments, req.PostComment{
-			ID:        c.PostComment.ID.String(),
-			Content:   c.PostComment.Content,
-			CreatedAt: c.PostComment.CreatedAt,
-			User: req.UserComment{
-				ID:       c.User.ID.String(),
-				Username: c.User.Username,
-				FullName: c.User.FullName,
-				Avatar:   c.User.Avatar,
-			},
-		})
-	}
-
-	return resultComments, nil
 }
 
 func (p *PostService) PostGetHomePage(page int, currentUserID string, posts interface{}) error {

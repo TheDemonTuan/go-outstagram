@@ -117,3 +117,9 @@ models:
         resolver: true
       files:
         resolver: true
+  PostComment:
+    fields:
+      user:
+        resolver: true
+      parent:
+        resolver: true

@@ -9,12 +9,13 @@ import "outstagram/services"
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	userService     services.UserService
-	postService     services.PostService
-	postFileService services.PostFileService
-	postLikeService services.PostLikeService
-	friendService   services.FriendService
-	inboxService    services.InboxService
+	userService        services.UserService
+	postService        services.PostService
+	postFileService    services.PostFileService
+	postCommentService services.PostCommentService
+	postLikeService    services.PostLikeService
+	friendService      services.FriendService
+	inboxService       services.InboxService
 	//postCommentService services.PostCommentService
 	//postLikeService services.PostLikeService
 }

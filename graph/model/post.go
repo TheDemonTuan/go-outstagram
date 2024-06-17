@@ -18,3 +18,18 @@ type Post struct {
 	UpdatedAt string `json:"updated_at"`
 	DeletedAt string `json:"deleted_at"`
 }
+
+type PostComment struct {
+	ID        string `json:"id"`
+	PostID    string `json:"post_id"`
+	UserID    string `json:"user_id"`
+	Content   string `json:"content"`
+	ParentID  string `json:"parent_id"`
+	Active    bool   `json:"active"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	DeletedAt string `json:"deleted_at"`
+
+	User   *User        `json:"user"`
+	Parent *PostComment `json:"parent"`
+}

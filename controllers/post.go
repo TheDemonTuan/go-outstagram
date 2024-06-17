@@ -114,12 +114,14 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
+	parentID := ctx.Query("parentID")
+
 	bodyData, err := common.RequestBodyValidator[req.PostMeComment](ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	postComment, err := p.postService.PostCommentByPostID(postID, userID, bodyData.Content)
+	postComment, err := p.postService.PostCommentByPostID(postID, userID, bodyData.Content, parentID)
 	if err != nil {
 		return err
 	}
@@ -153,18 +155,4 @@ func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
-}
-
-func (p *PostController) PostGetAllCommentByPostID(ctx *fiber.Ctx) error {
-	postID := ctx.Params("postID")
-
-	resultComments, err := p.postService.PostGetAllCommentByPostID(postID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusNotFound, "No comments found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying comments")
-	}
-
-	return common.CreateResponse(ctx, fiber.StatusOK, "Comments found", resultComments)
 }

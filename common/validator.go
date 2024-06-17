@@ -40,6 +40,8 @@ func RequestBodyValidator[T any](c *fiber.Ctx) (*T, error) {
 			return nil, errors.New(fmt.Sprintf("%s phải nhiều hơn hoặc bằng %v", err.Field(), err.Param()))
 		case "lte":
 			return nil, errors.New(fmt.Sprintf("%s phải ít hơn hoặc bằng %v", err.Field(), err.Param()))
+		case "uuid":
+			return nil, errors.New(fmt.Sprintf("%s không phải định dạng uuid", err.Field()))
 		default:
 			return nil, errors.New(fmt.Sprintf("%s: %v must satisfy %s %v criteria", err.Field(), err.Value(), err.Tag(), err.Param()))
 		}

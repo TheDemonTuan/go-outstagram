@@ -42,6 +42,7 @@ type ResolverRoot interface {
 	Friend() FriendResolver
 	Inbox() InboxResolver
 	Post() PostResolver
+	PostComment() PostCommentResolver
 	Query() QueryResolver
 	UserProfile() UserProfileResolver
 }
@@ -119,8 +120,11 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		DeletedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
+		Parent    func(childComplexity int) int
+		ParentID  func(childComplexity int) int
 		PostID    func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
+		User      func(childComplexity int) int
 		UserID    func(childComplexity int) int
 	}
 
@@ -213,6 +217,10 @@ type PostResolver interface {
 	PostFiles(ctx context.Context, obj *model.Post) ([]*model.PostFile, error)
 	PostLikes(ctx context.Context, obj *model.Post) ([]*model.PostLike, error)
 	PostComments(ctx context.Context, obj *model.Post) ([]*model.PostComment, error)
+}
+type PostCommentResolver interface {
+	User(ctx context.Context, obj *model.PostComment) (*model.User, error)
+	Parent(ctx context.Context, obj *model.PostComment) (*model.PostComment, error)
 }
 type QueryResolver interface {
 	UserByUsername(ctx context.Context, username string) (*model.User, error)
@@ -621,6 +629,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PostComment.ID(childComplexity), true
 
+	case "PostComment.parent":
+		if e.complexity.PostComment.Parent == nil {
+			break
+		}
+
+		return e.complexity.PostComment.Parent(childComplexity), true
+
+	case "PostComment.parent_id":
+		if e.complexity.PostComment.ParentID == nil {
+			break
+		}
+
+		return e.complexity.PostComment.ParentID(childComplexity), true
+
 	case "PostComment.post_id":
 		if e.complexity.PostComment.PostID == nil {
 			break
@@ -634,6 +656,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PostComment.UpdatedAt(childComplexity), true
+
+	case "PostComment.user":
+		if e.complexity.PostComment.User == nil {
+			break
+		}
+
+		return e.complexity.PostComment.User(childComplexity), true
 
 	case "PostComment.user_id":
 		if e.complexity.PostComment.UserID == nil {
@@ -3455,10 +3484,16 @@ func (ec *executionContext) fieldContext_Post_post_comments(_ context.Context, f
 				return ec.fieldContext_PostComment_post_id(ctx, field)
 			case "user_id":
 				return ec.fieldContext_PostComment_user_id(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PostComment_parent_id(ctx, field)
 			case "content":
 				return ec.fieldContext_PostComment_content(ctx, field)
 			case "active":
 				return ec.fieldContext_PostComment_active(ctx, field)
+			case "user":
+				return ec.fieldContext_PostComment_user(ctx, field)
+			case "parent":
+				return ec.fieldContext_PostComment_parent(ctx, field)
 			case "created_at":
 				return ec.fieldContext_PostComment_created_at(ctx, field)
 			case "updated_at":
@@ -3619,11 +3654,14 @@ func (ec *executionContext) _PostComment_id(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3660,11 +3698,14 @@ func (ec *executionContext) _PostComment_post_id(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_post_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3701,14 +3742,61 @@ func (ec *executionContext) _PostComment_user_id(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_user_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PostComment",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PostComment_parent_id(ctx context.Context, field graphql.CollectedField, obj *model.PostComment) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PostComment_parent_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PostComment_parent_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PostComment",
 		Field:      field,
@@ -3742,11 +3830,14 @@ func (ec *executionContext) _PostComment_content(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_content(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3783,11 +3874,14 @@ func (ec *executionContext) _PostComment_active(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*bool)
+	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3798,6 +3892,147 @@ func (ec *executionContext) fieldContext_PostComment_active(_ context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PostComment_user(ctx context.Context, field graphql.CollectedField, obj *model.PostComment) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PostComment_user(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PostComment().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PostComment_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PostComment",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "full_name":
+				return ec.fieldContext_User_full_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "phone":
+				return ec.fieldContext_User_phone(ctx, field)
+			case "avatar":
+				return ec.fieldContext_User_avatar(ctx, field)
+			case "bio":
+				return ec.fieldContext_User_bio(ctx, field)
+			case "birthday":
+				return ec.fieldContext_User_birthday(ctx, field)
+			case "gender":
+				return ec.fieldContext_User_gender(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			case "active":
+				return ec.fieldContext_User_active(ctx, field)
+			case "is_private":
+				return ec.fieldContext_User_is_private(ctx, field)
+			case "created_at":
+				return ec.fieldContext_User_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_User_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_User_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PostComment_parent(ctx context.Context, field graphql.CollectedField, obj *model.PostComment) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PostComment_parent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PostComment().Parent(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.PostComment)
+	fc.Result = res
+	return ec.marshalOPostComment2ᚖoutstagramᚋgraphᚋmodelᚐPostComment(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PostComment_parent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PostComment",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PostComment_id(ctx, field)
+			case "post_id":
+				return ec.fieldContext_PostComment_post_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_PostComment_user_id(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PostComment_parent_id(ctx, field)
+			case "content":
+				return ec.fieldContext_PostComment_content(ctx, field)
+			case "active":
+				return ec.fieldContext_PostComment_active(ctx, field)
+			case "user":
+				return ec.fieldContext_PostComment_user(ctx, field)
+			case "parent":
+				return ec.fieldContext_PostComment_parent(ctx, field)
+			case "created_at":
+				return ec.fieldContext_PostComment_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_PostComment_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_PostComment_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PostComment", field.Name)
 		},
 	}
 	return fc, nil
@@ -3824,11 +4059,14 @@ func (ec *executionContext) _PostComment_created_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3865,11 +4103,14 @@ func (ec *executionContext) _PostComment_updated_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3906,11 +4147,14 @@ func (ec *executionContext) _PostComment_deleted_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_deleted_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9039,20 +9283,118 @@ func (ec *executionContext) _PostComment(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = graphql.MarshalString("PostComment")
 		case "id":
 			out.Values[i] = ec._PostComment_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "post_id":
 			out.Values[i] = ec._PostComment_post_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "user_id":
 			out.Values[i] = ec._PostComment_user_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "parent_id":
+			out.Values[i] = ec._PostComment_parent_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "content":
 			out.Values[i] = ec._PostComment_content(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "active":
 			out.Values[i] = ec._PostComment_active(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "user":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PostComment_user(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "parent":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PostComment_parent(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._PostComment_created_at(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "updated_at":
 			out.Values[i] = ec._PostComment_updated_at(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "deleted_at":
 			out.Values[i] = ec._PostComment_deleted_at(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

@@ -22,17 +22,6 @@ type InboxGetAllBubble struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-type PostComment struct {
-	ID        *string `json:"id,omitempty"`
-	PostID    *string `json:"post_id,omitempty"`
-	UserID    *string `json:"user_id,omitempty"`
-	Content   *string `json:"content,omitempty"`
-	Active    *bool   `json:"active,omitempty"`
-	CreatedAt *string `json:"created_at,omitempty"`
-	UpdatedAt *string `json:"updated_at,omitempty"`
-	DeletedAt *string `json:"deleted_at,omitempty"`
-}
-
 type PostFile struct {
 	ID        *string `json:"id,omitempty"`
 	PostID    *string `json:"post_id,omitempty"`

@@ -22,7 +22,4 @@ func postRouter(r fiber.Router) {
 	//User API
 	postRoute.Add("GET", "user/:userID", postController.PostGetAllByUserID)
 	postRoute.Add("GET", ":postID", postController.PostGetByPostID)
-
-	postRoute.Add("GET", "comment/:postID", postController.PostGetAllCommentByPostID)
-
 }

@@ -106,7 +106,35 @@ func (r *postResolver) PostLikes(ctx context.Context, obj *model.Post) ([]*model
 
 // PostComments is the resolver for the post_comments field.
 func (r *postResolver) PostComments(ctx context.Context, obj *model.Post) ([]*model.PostComment, error) {
-	panic(fmt.Errorf("not implemented: PostComments - post_comments"))
+	var postCommentRecords []*model.PostComment
+	if err := r.postCommentService.PostCommentGetAllByPostID(obj.ID, &postCommentRecords); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return postCommentRecords, nil
+}
+
+// User is the resolver for the user field.
+func (r *postCommentResolver) User(ctx context.Context, obj *model.PostComment) (*model.User, error) {
+	var userRecord *model.User
+	if err := r.userService.UserGetByID(obj.UserID, &userRecord); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return userRecord, nil
+}
+
+// Parent is the resolver for the parent field.
+func (r *postCommentResolver) Parent(ctx context.Context, obj *model.PostComment) (*model.PostComment, error) {
+	var postCommentRecord *model.PostComment
+	if (obj.ParentID == "") || (obj.ParentID == "0") {
+		return postCommentRecord, nil
+	}
+	if err := r.postCommentService.PostCommentGetByID(obj.ParentID, &postCommentRecord); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return postCommentRecord, nil
 }
 
 // UserByUsername is the resolver for the userByUsername field.
@@ -275,6 +303,9 @@ func (r *Resolver) Inbox() InboxResolver { return &inboxResolver{r} }
 // Post returns PostResolver implementation.
 func (r *Resolver) Post() PostResolver { return &postResolver{r} }
 
+// PostComment returns PostCommentResolver implementation.
+func (r *Resolver) PostComment() PostCommentResolver { return &postCommentResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
@@ -284,5 +315,6 @@ func (r *Resolver) UserProfile() UserProfileResolver { return &userProfileResolv
 type friendResolver struct{ *Resolver }
 type inboxResolver struct{ *Resolver }
 type postResolver struct{ *Resolver }
+type postCommentResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type userProfileResolver struct{ *Resolver }
