@@ -1,9 +1,13 @@
 package req
 
-import "time"
+import (
+	"outstagram/models/entity"
+	"time"
+)
 
 type PostMeEdit struct {
-	Caption string `json:"caption" validate:"required,min=1,max=2200"`
+	Caption string             `json:"caption" validate:"required,min=1,max=2200"`
+	Privacy entity.PostPrivacy `json:"privacy" validate:"omitempty"`
 }
 
 type PostMeComment struct {

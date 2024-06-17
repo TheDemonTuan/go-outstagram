@@ -274,7 +274,7 @@ func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.
 	return postLike, nil
 }
 
-func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption string) (entity.Post, error) {
+func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption string, privacy entity.PostPrivacy) (entity.Post, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -288,6 +288,12 @@ func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption 
 	}
 
 	postRecord.Caption = strings.Trim(caption, " ")
+
+	if privacy == postRecord.Privacy {
+		return postRecord, nil
+	}
+
+	postRecord.Privacy = privacy
 
 	if err := common.DBConn.Save(&postRecord).Error; err != nil {
 		return entity.Post{}, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post")
