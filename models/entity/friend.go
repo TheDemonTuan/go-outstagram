@@ -16,8 +16,8 @@ const (
 
 type Friend struct {
 	ID         uint         `json:"id" gorm:"primaryKey;autoIncrement"`
-	FromUserID uuid.UUID    `json:"from_user_id" gorm:"not null"`
-	ToUserID   uuid.UUID    `json:"to_user_id" gorm:"not null"`
+	FromUserID uuid.UUID    `json:"from_user_id" gorm:"not null;index"`
+	ToUserID   uuid.UUID    `json:"to_user_id" gorm:"not null;index"`
 	Status     FriendStatus `json:"status" gorm:"default:0"`
 
 	FromUser User `gorm:"foreignKey:FromUserID"`

@@ -14,7 +14,7 @@ const (
 
 type InboxFile struct {
 	ID      uint          `json:"id" gorm:"primaryKey"`
-	InboxID uuid.UUID     `json:"inbox_id" gorm:"type:uuid;not null"`
+	InboxID uuid.UUID     `json:"inbox_id" gorm:"type:uuid;not null;index"`
 	Type    InboxFileType `json:"type" gorm:"not null;default:1"`
 	URL     string        `json:"url" gorm:"not null;size:255"`
 	Active  bool          `json:"active" gorm:"default:true"`

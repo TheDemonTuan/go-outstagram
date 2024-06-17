@@ -210,10 +210,18 @@ func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, local
 	}
 
 	for _, filePath := range cloudinaryPaths {
+		var fileType entity.PostFileType
+		if filePath.ResourceType == "video" {
+			fileType = entity.PostFileVideo
+		} else {
+			fileType = entity.PostFileImage
+		}
+
 		newPost.PostFiles = append(newPost.PostFiles, entity.PostFile{
 			ID:     filePath.PublicID,
 			PostID: newPostID,
 			URL:    filePath.SecureURL,
+			Type:   fileType,
 		})
 	}
 

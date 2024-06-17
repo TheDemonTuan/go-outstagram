@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/pusher/pusher-http-go/v5 v5.1.1
-	github.com/valyala/fasthttp v1.54.0
+	github.com/valyala/fasthttp v1.55.0
 	github.com/vektah/gqlparser/v2 v2.5.16
 	golang.org/x/crypto v0.24.0
 	gorm.io/driver/postgres v1.5.9
@@ -41,7 +41,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
