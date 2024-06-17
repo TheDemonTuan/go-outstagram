@@ -89,7 +89,7 @@ func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	post, err := p.postService.PostEditByPostID(postID, userID, bodyData.Caption)
+	post, err := p.postService.PostEditByPostID(postID, userID, bodyData.Caption, bodyData.Privacy)
 	if err != nil {
 		return err
 	}
