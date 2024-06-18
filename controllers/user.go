@@ -122,6 +122,21 @@ func (u *UserController) UserMeEditEmail(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Email updated", userInfo.Email)
 }
 
+func (u *UserController) UserMeEditPassword(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.UserMeUpdatePassword](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := u.userService.UserEditPasswordSaveToDB(ctx, bodyData); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Password updated", nil)
+
+}
+
 func (u *UserController) UserMeDeleteAvatar(ctx *fiber.Ctx) error {
 
 	if err := u.userService.UserMeDeleteAvatarSaveToDB(ctx); err != nil {

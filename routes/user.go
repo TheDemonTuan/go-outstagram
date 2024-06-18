@@ -19,6 +19,7 @@ func userRouter(r fiber.Router) {
 	userRoute.Add("PATCH", "me/private", userController.UserMeEditPrivate)
 	userRoute.Add("PATCH", "me/phone", userController.UserMeEditPhone)
 	userRoute.Add("PATCH", "me/email", userController.UserMeEditEmail)
+	userRoute.Add("PATCH", "me/password", userController.UserMeEditPassword)
 	userRoute.Add("DELETE", "me/avatar", userController.UserMeDeleteAvatar)
 	//userRoute.Add("POST", "delete", userController.UserDelete)
 }
