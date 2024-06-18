@@ -21,7 +21,7 @@ func (pc *PostCommentService) PostCommentGetByID(postCommentID string, postComme
 }
 
 func (pc *PostCommentService) PostCommentGetAllByPostID(postID string, postComments interface{}) error {
-	if err := common.DBConn.Model(&entity.PostComment{}).Where("post_id = ?", postID).Find(postComments).Error; err != nil {
+	if err := common.DBConn.Model(&entity.PostComment{}).Where("post_id = ?", postID).Order("created_at DESC").Find(postComments).Error; err != nil {
 		return errors.New("error when getting post comments by post id")
 	}
 
