@@ -17,3 +17,8 @@ type UserMeUpdatePhone struct {
 type UserMeUpdateEmail struct {
 	Email string `json:"email" validate:"required,email,min=5,max=100"`
 }
+
+type UserMeUpdatePassword struct {
+	CurrentPassword string `json:"current_password" validate:"required,min=8"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
+}

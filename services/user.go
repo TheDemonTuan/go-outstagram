@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"mime/multipart"
 	"os"
@@ -348,4 +349,29 @@ func (u *UserService) UserMeDeleteAvatarSaveToDB(ctx *fiber.Ctx) error {
 	ctx.Locals(common.UserInfoLocalKey, userInfo)
 
 	return nil
+}
+
+func (u *UserService) UserEditPasswordSaveToDB(ctx *fiber.Ctx, bodyData *req.UserMeUpdatePassword) error {
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(bodyData.CurrentPassword))
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "current password is incorrect")
+	}
+
+	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(bodyData.NewPassword), bcrypt.DefaultCost)
+	if hashedPasswordErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while hashing password")
+	}
+
+	userInfo.Password = string(hashedPassword)
+
+	if err := common.DBConn.Omit("phone").Save(&userInfo).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	ctx.Locals(common.UserInfoLocalKey, userInfo)
+
+	return nil
+
 }
