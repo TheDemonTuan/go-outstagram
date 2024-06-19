@@ -9,6 +9,7 @@ import (
 	"outstagram/models/entity"
 	"outstagram/models/req"
 	"outstagram/services"
+	"strings"
 )
 
 type PostController struct {
@@ -121,7 +122,13 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	postComment, err := p.postService.PostCommentByPostID(postID, userID, bodyData.Content, parentID)
+	content := strings.TrimSpace(bodyData.Content)
+
+	if content == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Comment content is empty")
+	}
+
+	postComment, err := p.postService.PostCommentByPostID(postID, userID, content, parentID)
 	if err != nil {
 		return err
 	}

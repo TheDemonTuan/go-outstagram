@@ -27,7 +27,6 @@ func (p *PostService) PostGetByPostID(postID string) (entity.Post, error) {
 	}
 
 	return post, nil
-
 }
 
 func (p *PostService) PostGetAllByUserID(userID string, posts *[]entity.Post) error {
