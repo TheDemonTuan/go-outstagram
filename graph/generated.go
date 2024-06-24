@@ -43,8 +43,10 @@ type ResolverRoot interface {
 	Inbox() InboxResolver
 	Post() PostResolver
 	PostComment() PostCommentResolver
+	PostLike() PostLikeResolver
 	Query() QueryResolver
 	UserProfile() UserProfileResolver
+	UserSuggestion() UserSuggestionResolver
 }
 
 type DirectiveRoot struct {
@@ -146,6 +148,7 @@ type ComplexityRoot struct {
 		IsLiked   func(childComplexity int) int
 		PostID    func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
+		User      func(childComplexity int) int
 		UserID    func(childComplexity int) int
 	}
 
@@ -191,14 +194,18 @@ type ComplexityRoot struct {
 		Avatar   func(childComplexity int) int
 		FullName func(childComplexity int) int
 		ID       func(childComplexity int) int
+		Role     func(childComplexity int) int
 		Username func(childComplexity int) int
 	}
 
 	UserSuggestion struct {
 		Active   func(childComplexity int) int
 		Avatar   func(childComplexity int) int
+		Friends  func(childComplexity int) int
 		FullName func(childComplexity int) int
 		ID       func(childComplexity int) int
+		Posts    func(childComplexity int) int
+		Role     func(childComplexity int) int
 		Username func(childComplexity int) int
 	}
 }
@@ -222,6 +229,9 @@ type PostCommentResolver interface {
 	User(ctx context.Context, obj *model.PostComment) (*model.User, error)
 	Parent(ctx context.Context, obj *model.PostComment) (*model.PostComment, error)
 }
+type PostLikeResolver interface {
+	User(ctx context.Context, obj *model.PostLike) (*model.User, error)
+}
 type QueryResolver interface {
 	UserByUsername(ctx context.Context, username string) (*model.User, error)
 	UserProfile(ctx context.Context, username string) (*model.UserProfile, error)
@@ -237,6 +247,10 @@ type UserProfileResolver interface {
 	User(ctx context.Context, obj *model.UserProfile) (*model.User, error)
 	Posts(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error)
 	Friends(ctx context.Context, obj *model.UserProfile) ([]*model.Friend, error)
+}
+type UserSuggestionResolver interface {
+	Posts(ctx context.Context, obj *model.UserSuggestion) ([]*model.Post, error)
+	Friends(ctx context.Context, obj *model.UserSuggestion) ([]*model.Friend, error)
 }
 
 type executableSchema struct {
@@ -769,6 +783,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PostLike.UpdatedAt(childComplexity), true
 
+	case "PostLike.user":
+		if e.complexity.PostLike.User == nil {
+			break
+		}
+
+		return e.complexity.PostLike.User(childComplexity), true
+
 	case "PostLike.user_id":
 		if e.complexity.PostLike.UserID == nil {
 			break
@@ -1040,6 +1061,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserSearch.ID(childComplexity), true
 
+	case "UserSearch.role":
+		if e.complexity.UserSearch.Role == nil {
+			break
+		}
+
+		return e.complexity.UserSearch.Role(childComplexity), true
+
 	case "UserSearch.username":
 		if e.complexity.UserSearch.Username == nil {
 			break
@@ -1061,6 +1089,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserSuggestion.Avatar(childComplexity), true
 
+	case "UserSuggestion.friends":
+		if e.complexity.UserSuggestion.Friends == nil {
+			break
+		}
+
+		return e.complexity.UserSuggestion.Friends(childComplexity), true
+
 	case "UserSuggestion.full_name":
 		if e.complexity.UserSuggestion.FullName == nil {
 			break
@@ -1074,6 +1109,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserSuggestion.ID(childComplexity), true
+
+	case "UserSuggestion.posts":
+		if e.complexity.UserSuggestion.Posts == nil {
+			break
+		}
+
+		return e.complexity.UserSuggestion.Posts(childComplexity), true
+
+	case "UserSuggestion.role":
+		if e.complexity.UserSuggestion.Role == nil {
+			break
+		}
+
+		return e.complexity.UserSuggestion.Role(childComplexity), true
 
 	case "UserSuggestion.username":
 		if e.complexity.UserSuggestion.Username == nil {
@@ -3054,14 +3103,11 @@ func (ec *executionContext) _Post_caption(ctx context.Context, field graphql.Col
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_caption(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3098,14 +3144,11 @@ func (ec *executionContext) _Post_is_hide_like(ctx context.Context, field graphq
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_is_hide_like(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3142,14 +3185,11 @@ func (ec *executionContext) _Post_is_hide_comment(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_is_hide_comment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3186,14 +3226,11 @@ func (ec *executionContext) _Post_privacy(ctx context.Context, field graphql.Col
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_privacy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3230,14 +3267,11 @@ func (ec *executionContext) _Post_active(ctx context.Context, field graphql.Coll
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3429,6 +3463,8 @@ func (ec *executionContext) fieldContext_Post_post_likes(_ context.Context, fiel
 				return ec.fieldContext_PostLike_user_id(ctx, field)
 			case "is_liked":
 				return ec.fieldContext_PostLike_is_liked(ctx, field)
+			case "user":
+				return ec.fieldContext_PostLike_user(ctx, field)
 			case "created_at":
 				return ec.fieldContext_PostLike_created_at(ctx, field)
 			case "updated_at":
@@ -3528,14 +3564,11 @@ func (ec *executionContext) _Post_created_at(ctx context.Context, field graphql.
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Post_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3786,14 +3819,11 @@ func (ec *executionContext) _PostComment_parent_id(ctx context.Context, field gr
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalOID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_parent_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3830,14 +3860,11 @@ func (ec *executionContext) _PostComment_content(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_content(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3874,14 +3901,11 @@ func (ec *executionContext) _PostComment_active(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3918,14 +3942,11 @@ func (ec *executionContext) _PostComment_user(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+	return ec.marshalOUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4059,14 +4080,11 @@ func (ec *executionContext) _PostComment_created_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4103,14 +4121,11 @@ func (ec *executionContext) _PostComment_updated_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4147,14 +4162,11 @@ func (ec *executionContext) _PostComment_deleted_at(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostComment_deleted_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4191,11 +4203,14 @@ func (ec *executionContext) _PostFile_id(ctx context.Context, field graphql.Coll
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostFile_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4232,11 +4247,14 @@ func (ec *executionContext) _PostFile_post_id(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostFile_post_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4519,11 +4537,14 @@ func (ec *executionContext) _PostLike_id(ctx context.Context, field graphql.Coll
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4560,11 +4581,14 @@ func (ec *executionContext) _PostLike_post_id(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_post_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4601,11 +4625,14 @@ func (ec *executionContext) _PostLike_user_id(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_user_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4644,9 +4671,9 @@ func (ec *executionContext) _PostLike_is_liked(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*bool)
+	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_is_liked(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4657,6 +4684,79 @@ func (ec *executionContext) fieldContext_PostLike_is_liked(_ context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PostLike_user(ctx context.Context, field graphql.CollectedField, obj *model.PostLike) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PostLike_user(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PostLike().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalOUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PostLike_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PostLike",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "full_name":
+				return ec.fieldContext_User_full_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "phone":
+				return ec.fieldContext_User_phone(ctx, field)
+			case "avatar":
+				return ec.fieldContext_User_avatar(ctx, field)
+			case "bio":
+				return ec.fieldContext_User_bio(ctx, field)
+			case "birthday":
+				return ec.fieldContext_User_birthday(ctx, field)
+			case "gender":
+				return ec.fieldContext_User_gender(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			case "active":
+				return ec.fieldContext_User_active(ctx, field)
+			case "is_private":
+				return ec.fieldContext_User_is_private(ctx, field)
+			case "created_at":
+				return ec.fieldContext_User_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_User_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_User_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
@@ -4685,9 +4785,9 @@ func (ec *executionContext) _PostLike_created_at(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4726,9 +4826,9 @@ func (ec *executionContext) _PostLike_updated_at(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4767,9 +4867,9 @@ func (ec *executionContext) _PostLike_deleted_at(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PostLike_deleted_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4984,6 +5084,8 @@ func (ec *executionContext) fieldContext_Query_userSearch(ctx context.Context, f
 				return ec.fieldContext_UserSearch_full_name(ctx, field)
 			case "avatar":
 				return ec.fieldContext_UserSearch_avatar(ctx, field)
+			case "role":
+				return ec.fieldContext_UserSearch_role(ctx, field)
 			case "active":
 				return ec.fieldContext_UserSearch_active(ctx, field)
 			}
@@ -5051,8 +5153,14 @@ func (ec *executionContext) fieldContext_Query_userSuggestion(ctx context.Contex
 				return ec.fieldContext_UserSuggestion_full_name(ctx, field)
 			case "avatar":
 				return ec.fieldContext_UserSuggestion_avatar(ctx, field)
+			case "role":
+				return ec.fieldContext_UserSuggestion_role(ctx, field)
 			case "active":
 				return ec.fieldContext_UserSuggestion_active(ctx, field)
+			case "posts":
+				return ec.fieldContext_UserSuggestion_posts(ctx, field)
+			case "friends":
+				return ec.fieldContext_UserSuggestion_friends(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserSuggestion", field.Name)
 		},
@@ -6489,11 +6597,14 @@ func (ec *executionContext) _UserSearch_id(ctx context.Context, field graphql.Co
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSearch_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6530,11 +6641,14 @@ func (ec *executionContext) _UserSearch_username(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSearch_username(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6632,6 +6746,47 @@ func (ec *executionContext) fieldContext_UserSearch_avatar(_ context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _UserSearch_role(ctx context.Context, field graphql.CollectedField, obj *model.UserSearch) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSearch_role(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Role, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSearch_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSearch",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserSearch_active(ctx context.Context, field graphql.CollectedField, obj *model.UserSearch) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserSearch_active(ctx, field)
 	if err != nil {
@@ -6694,11 +6849,14 @@ func (ec *executionContext) _UserSuggestion_id(ctx context.Context, field graphq
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6735,11 +6893,14 @@ func (ec *executionContext) _UserSuggestion_username(ctx context.Context, field 
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_username(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6778,9 +6939,9 @@ func (ec *executionContext) _UserSuggestion_full_name(ctx context.Context, field
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_full_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6819,9 +6980,9 @@ func (ec *executionContext) _UserSuggestion_avatar(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_avatar(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6832,6 +6993,47 @@ func (ec *executionContext) fieldContext_UserSuggestion_avatar(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSuggestion_role(ctx context.Context, field graphql.CollectedField, obj *model.UserSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSuggestion_role(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Role, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSuggestion_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6860,9 +7062,9 @@ func (ec *executionContext) _UserSuggestion_active(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*bool)
+	res := resTmp.(bool)
 	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6873,6 +7075,138 @@ func (ec *executionContext) fieldContext_UserSuggestion_active(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSuggestion_posts(ctx context.Context, field graphql.CollectedField, obj *model.UserSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSuggestion_posts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserSuggestion().Posts(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Post)
+	fc.Result = res
+	return ec.marshalOPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPost(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSuggestion_posts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSuggestion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Post_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_Post_user_id(ctx, field)
+			case "caption":
+				return ec.fieldContext_Post_caption(ctx, field)
+			case "is_hide_like":
+				return ec.fieldContext_Post_is_hide_like(ctx, field)
+			case "is_hide_comment":
+				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
+			case "active":
+				return ec.fieldContext_Post_active(ctx, field)
+			case "user":
+				return ec.fieldContext_Post_user(ctx, field)
+			case "post_files":
+				return ec.fieldContext_Post_post_files(ctx, field)
+			case "post_likes":
+				return ec.fieldContext_Post_post_likes(ctx, field)
+			case "post_comments":
+				return ec.fieldContext_Post_post_comments(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Post_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Post_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Post_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Post", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSuggestion_friends(ctx context.Context, field graphql.CollectedField, obj *model.UserSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSuggestion_friends(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserSuggestion().Friends(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Friend)
+	fc.Result = res
+	return ec.marshalOFriend2ᚕᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSuggestion_friends(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSuggestion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Friend_id(ctx, field)
+			case "from_user_id":
+				return ec.fieldContext_Friend_from_user_id(ctx, field)
+			case "to_user_id":
+				return ec.fieldContext_Friend_to_user_id(ctx, field)
+			case "status":
+				return ec.fieldContext_Friend_status(ctx, field)
+			case "from_user_info":
+				return ec.fieldContext_Friend_from_user_info(ctx, field)
+			case "to_user_info":
+				return ec.fieldContext_Friend_to_user_info(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Friend_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Friend_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Friend_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Friend", field.Name)
 		},
 	}
 	return fc, nil
@@ -9083,29 +9417,14 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "caption":
 			out.Values[i] = ec._Post_caption(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "is_hide_like":
 			out.Values[i] = ec._Post_is_hide_like(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "is_hide_comment":
 			out.Values[i] = ec._Post_is_hide_comment(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "privacy":
 			out.Values[i] = ec._Post_privacy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "active":
 			out.Values[i] = ec._Post_active(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "user":
 			field := field
 
@@ -9240,9 +9559,6 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._Post_created_at(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "updated_at":
 			out.Values[i] = ec._Post_updated_at(ctx, field, obj)
 		case "deleted_at":
@@ -9298,32 +9614,20 @@ func (ec *executionContext) _PostComment(ctx context.Context, sel ast.SelectionS
 			}
 		case "parent_id":
 			out.Values[i] = ec._PostComment_parent_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "content":
 			out.Values[i] = ec._PostComment_content(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "active":
 			out.Values[i] = ec._PostComment_active(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "user":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._PostComment_user(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -9382,19 +9686,10 @@ func (ec *executionContext) _PostComment(ctx context.Context, sel ast.SelectionS
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._PostComment_created_at(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "updated_at":
 			out.Values[i] = ec._PostComment_updated_at(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "deleted_at":
 			out.Values[i] = ec._PostComment_deleted_at(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9431,8 +9726,14 @@ func (ec *executionContext) _PostFile(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = graphql.MarshalString("PostFile")
 		case "id":
 			out.Values[i] = ec._PostFile_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "post_id":
 			out.Values[i] = ec._PostFile_post_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "url":
 			out.Values[i] = ec._PostFile_url(ctx, field, obj)
 		case "type":
@@ -9481,12 +9782,54 @@ func (ec *executionContext) _PostLike(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = graphql.MarshalString("PostLike")
 		case "id":
 			out.Values[i] = ec._PostLike_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "post_id":
 			out.Values[i] = ec._PostLike_post_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "user_id":
 			out.Values[i] = ec._PostLike_user_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "is_liked":
 			out.Values[i] = ec._PostLike_is_liked(ctx, field, obj)
+		case "user":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PostLike_user(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._PostLike_created_at(ctx, field, obj)
 		case "updated_at":
@@ -9991,12 +10334,20 @@ func (ec *executionContext) _UserSearch(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = graphql.MarshalString("UserSearch")
 		case "id":
 			out.Values[i] = ec._UserSearch_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "username":
 			out.Values[i] = ec._UserSearch_username(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "full_name":
 			out.Values[i] = ec._UserSearch_full_name(ctx, field, obj)
 		case "avatar":
 			out.Values[i] = ec._UserSearch_avatar(ctx, field, obj)
+		case "role":
+			out.Values[i] = ec._UserSearch_role(ctx, field, obj)
 		case "active":
 			out.Values[i] = ec._UserSearch_active(ctx, field, obj)
 		default:
@@ -10035,14 +10386,88 @@ func (ec *executionContext) _UserSuggestion(ctx context.Context, sel ast.Selecti
 			out.Values[i] = graphql.MarshalString("UserSuggestion")
 		case "id":
 			out.Values[i] = ec._UserSuggestion_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "username":
 			out.Values[i] = ec._UserSuggestion_username(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "full_name":
 			out.Values[i] = ec._UserSuggestion_full_name(ctx, field, obj)
 		case "avatar":
 			out.Values[i] = ec._UserSuggestion_avatar(ctx, field, obj)
+		case "role":
+			out.Values[i] = ec._UserSuggestion_role(ctx, field, obj)
 		case "active":
 			out.Values[i] = ec._UserSuggestion_active(ctx, field, obj)
+		case "posts":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserSuggestion_posts(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "friends":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserSuggestion_friends(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11087,19 +11512,61 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalID(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOFriend2ᚕᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx context.Context, sel ast.SelectionSet, v []*model.Friend) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := graphql.MarshalID(*v)
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOFriend2ᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOFriend2ᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx context.Context, sel ast.SelectionSet, v *model.Friend) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Friend(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOID2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalID(v)
 	return res
 }
 
@@ -11159,6 +11626,54 @@ func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}
 func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
 	res := graphql.MarshalInt(v)
 	return res
+}
+
+func (ec *executionContext) marshalOPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPost(ctx context.Context, sel ast.SelectionSet, v []*model.Post) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPost2ᚖoutstagramᚋgraphᚋmodelᚐPost(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOPost2ᚖoutstagramᚋgraphᚋmodelᚐPost(ctx context.Context, sel ast.SelectionSet, v *model.Post) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Post(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOPostComment2ᚕᚖoutstagramᚋgraphᚋmodelᚐPostComment(ctx context.Context, sel ast.SelectionSet, v []*model.PostComment) graphql.Marshaler {

@@ -22,43 +22,48 @@ type User {
 }
 
 type UserSearch {
-    id: ID
-    username: String
+    id: ID!
+    username: String!
     full_name: String
     avatar: String
+    role: Boolean
     active: Boolean
 }
 
 type UserSuggestion {
-    id: ID
-    username: String
+    id: ID!
+    username: String!
     full_name: String
     avatar: String
+    role: Boolean
     active: Boolean
+
+    posts: [Post]
+    friends: [Friend]
 }
 
 type Post {
     id: ID!
     user_id: ID!
-    caption: String!
-    is_hide_like: Boolean!
-    is_hide_comment: Boolean!
-    privacy: Int!
-    active: Boolean!
+    caption: String
+    is_hide_like: Boolean
+    is_hide_comment: Boolean
+    privacy: Int
+    active: Boolean
 
     user: User
     post_files: [PostFile]
     post_likes: [PostLike]
     post_comments: [PostComment]
 
-    created_at: String!
+    created_at: String
     updated_at: String
     deleted_at: String
 }
 
 type PostFile {
-    id: ID
-    post_id: ID
+    id: ID!
+    post_id: ID!
     url: String
     type: String
     active: Boolean
@@ -68,10 +73,13 @@ type PostFile {
 }
 
 type PostLike {
-    id: ID
-    post_id: ID
-    user_id: ID
+    id: ID!
+    post_id: ID!
+    user_id: ID!
     is_liked: Boolean
+
+    user: User
+
     created_at: String
     updated_at: String
     deleted_at: String
@@ -81,16 +89,16 @@ type PostComment {
     id: ID!
     post_id: ID!
     user_id: ID!
-    parent_id: ID!
-    content: String!
-    active: Boolean!
+    parent_id: ID
+    content: String
+    active: Boolean
 
-    user: User!
+    user: User
     parent: PostComment
 
-    created_at: String!
-    updated_at: String!
-    deleted_at: String!
+    created_at: String
+    updated_at: String
+    deleted_at: String
 }
 
 type UserProfile {

@@ -123,3 +123,13 @@ models:
         resolver: true
       parent:
         resolver: true
+  UserSuggestion:
+    fields:
+      posts:
+        resolver: true
+      friends:
+        resolver: true
+  PostLike:
+    fields:
+      user:
+        resolver: true

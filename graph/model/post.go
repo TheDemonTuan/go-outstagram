@@ -33,3 +33,15 @@ type PostComment struct {
 	User   *User        `json:"user"`
 	Parent *PostComment `json:"parent"`
 }
+
+type PostLike struct {
+	ID        string `json:"id"`
+	PostID    string `json:"post_id"`
+	UserID    string `json:"user_id"`
+	IsLiked   bool   `json:"is_liked"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	DeletedAt string `json:"deleted_at"`
+
+	User *User `json:"user"`
+}

@@ -137,6 +137,16 @@ func (r *postCommentResolver) Parent(ctx context.Context, obj *model.PostComment
 	return postCommentRecord, nil
 }
 
+// User is the resolver for the user field.
+func (r *postLikeResolver) User(ctx context.Context, obj *model.PostLike) (*model.User, error) {
+	var userRecord *model.User
+	if err := r.userService.UserGetByID(obj.UserID, &userRecord); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return userRecord, nil
+}
+
 // UserByUsername is the resolver for the userByUsername field.
 func (r *queryResolver) UserByUsername(ctx context.Context, username string) (*model.User, error) {
 	var userRecord *model.User
@@ -294,6 +304,26 @@ func (r *userProfileResolver) Friends(ctx context.Context, obj *model.UserProfil
 	return friends, nil
 }
 
+// Posts is the resolver for the posts field.
+func (r *userSuggestionResolver) Posts(ctx context.Context, obj *model.UserSuggestion) ([]*model.Post, error) {
+	var posts []*model.Post
+	if err := r.postService.PostGetAllByUserName(obj.Username, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
+// Friends is the resolver for the friends field.
+func (r *userSuggestionResolver) Friends(ctx context.Context, obj *model.UserSuggestion) ([]*model.Friend, error) {
+	var friends []*model.Friend
+	if err := r.friendService.GetAllFriendsByUserName(obj.Username, &friends); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return friends, nil
+}
+
 // Friend returns FriendResolver implementation.
 func (r *Resolver) Friend() FriendResolver { return &friendResolver{r} }
 
@@ -306,15 +336,23 @@ func (r *Resolver) Post() PostResolver { return &postResolver{r} }
 // PostComment returns PostCommentResolver implementation.
 func (r *Resolver) PostComment() PostCommentResolver { return &postCommentResolver{r} }
 
+// PostLike returns PostLikeResolver implementation.
+func (r *Resolver) PostLike() PostLikeResolver { return &postLikeResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 // UserProfile returns UserProfileResolver implementation.
 func (r *Resolver) UserProfile() UserProfileResolver { return &userProfileResolver{r} }
 
+// UserSuggestion returns UserSuggestionResolver implementation.
+func (r *Resolver) UserSuggestion() UserSuggestionResolver { return &userSuggestionResolver{r} }
+
 type friendResolver struct{ *Resolver }
 type inboxResolver struct{ *Resolver }
 type postResolver struct{ *Resolver }
 type postCommentResolver struct{ *Resolver }
+type postLikeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type userProfileResolver struct{ *Resolver }
+type userSuggestionResolver struct{ *Resolver }
