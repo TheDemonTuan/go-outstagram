@@ -68,6 +68,49 @@ func (p *PostService) PostGetAllByPostID(isOk bool, postID string, postRecords i
 	return nil
 }
 
+func (p *PostService) PostGetSuggestions(isOK bool, userMeInfo entity.User, userID, skipPostID string, limit int, postRecords interface{}) error {
+	var user entity.User
+	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error while querying user")
+	}
+
+	var post entity.Post
+	if err := common.DBConn.Where("id = ? AND user_id = ?", skipPostID, user.ID.String()).First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("post not found")
+		}
+		return errors.New("error while querying post")
+
+	}
+
+	if isOK {
+		isFriend := true
+		var friendRecords entity.Friend
+		if err := common.DBConn.Where("((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = ?", userMeInfo.ID.String(), userID, userID, userMeInfo.ID.String(), entity.FriendAccepted).First(&friendRecords).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				isFriend = false
+			} else {
+				return errors.New("error while querying friend")
+			}
+		}
+
+		if isFriend {
+			if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", userID, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Limit(limit).Find(postRecords).Error; err != nil {
+				return errors.New("error while querying posts")
+			}
+			return nil
+		}
+	}
+
+	if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", userID, []entity.PostPrivacy{entity.PostPublic}).Limit(limit).Find(postRecords).Error; err != nil {
+		return errors.New("error while querying post")
+	}
+	return nil
+}
+
 func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	if err := common.DBConn.Find(&posts).Error; err != nil {
 		return err

@@ -6,10 +6,10 @@ type Friend struct {
 	ToUserID   string `json:"to_user_id"`
 	Status     int    `json:"status"`
 
-	FromUserInfo *User `json:"from_user_info"`
-	ToUserInfo   *User `json:"to_user_info"`
-
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 	DeletedAt string `json:"deleted_at"`
+
+	FromUserInfo *User `json:"from_user_info"`
+	ToUserInfo   *User `json:"to_user_info"`
 }

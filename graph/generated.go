@@ -159,6 +159,7 @@ type ComplexityRoot struct {
 		PostByPostID       func(childComplexity int, postID string) int
 		PostByUsername     func(childComplexity int, username string) int
 		PostHomePage       func(childComplexity int, page int) int
+		PostSuggestions    func(childComplexity int, userID string, skipPostID string, limit int) int
 		UserByUsername     func(childComplexity int, username string) int
 		UserProfile        func(childComplexity int, username string) int
 		UserSearch         func(childComplexity int, keyword string) int
@@ -185,8 +186,8 @@ type ComplexityRoot struct {
 	}
 
 	UserProfile struct {
-		Friends  func(childComplexity int) int
 		Posts    func(childComplexity int) int
+		User     func(childComplexity int) int
 		Username func(childComplexity int) int
 	}
 
@@ -240,6 +241,7 @@ type QueryResolver interface {
 	UserSuggestion(ctx context.Context, count int) ([]*model.UserSuggestion, error)
 	PostByUsername(ctx context.Context, username string) ([]*model.Post, error)
 	PostByPostID(ctx context.Context, postID string) (*model.Post, error)
+	PostSuggestions(ctx context.Context, userID string, skipPostID string, limit int) ([]*model.Post, error)
 	PostHomePage(ctx context.Context, page int) ([]*model.Post, error)
 	InboxGetByUsername(ctx context.Context, username string) ([]*model.Inbox, error)
 	InboxGetAllBubble(ctx context.Context) ([]*model.InboxGetAllBubble, error)
@@ -248,8 +250,8 @@ type UserResolver interface {
 	Friends(ctx context.Context, obj *model.User) ([]*model.Friend, error)
 }
 type UserProfileResolver interface {
+	User(ctx context.Context, obj *model.UserProfile) (*model.User, error)
 	Posts(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error)
-	Friends(ctx context.Context, obj *model.UserProfile) ([]*model.Friend, error)
 }
 type UserSuggestionResolver interface {
 	Posts(ctx context.Context, obj *model.UserSuggestion) ([]*model.Post, error)
@@ -855,6 +857,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.PostHomePage(childComplexity, args["page"].(int)), true
 
+	case "Query.postSuggestions":
+		if e.complexity.Query.PostSuggestions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_postSuggestions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PostSuggestions(childComplexity, args["userID"].(string), args["skipPostID"].(string), args["limit"].(int)), true
+
 	case "Query.userByUsername":
 		if e.complexity.Query.UserByUsername == nil {
 			break
@@ -1015,19 +1029,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Username(childComplexity), true
 
-	case "UserProfile.friends":
-		if e.complexity.UserProfile.Friends == nil {
-			break
-		}
-
-		return e.complexity.UserProfile.Friends(childComplexity), true
-
 	case "UserProfile.posts":
 		if e.complexity.UserProfile.Posts == nil {
 			break
 		}
 
 		return e.complexity.UserProfile.Posts(childComplexity), true
+
+	case "UserProfile.user":
+		if e.complexity.UserProfile.User == nil {
+			break
+		}
+
+		return e.complexity.UserProfile.User(childComplexity), true
 
 	case "UserProfile.username":
 		if e.complexity.UserProfile.Username == nil {
@@ -1314,6 +1328,39 @@ func (ec *executionContext) field_Query_postHomePage_args(ctx context.Context, r
 		}
 	}
 	args["page"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_postSuggestions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userID"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["skipPostID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skipPostID"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skipPostID"] = arg1
+	var arg2 int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg2
 	return args, nil
 }
 
@@ -5032,10 +5079,10 @@ func (ec *executionContext) fieldContext_Query_userProfile(ctx context.Context, 
 			switch field.Name {
 			case "username":
 				return ec.fieldContext_UserProfile_username(ctx, field)
+			case "user":
+				return ec.fieldContext_UserProfile_user(ctx, field)
 			case "posts":
 				return ec.fieldContext_UserProfile_posts(ctx, field)
-			case "friends":
-				return ec.fieldContext_UserProfile_friends(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserProfile", field.Name)
 		},
@@ -5360,6 +5407,91 @@ func (ec *executionContext) fieldContext_Query_postByPostId(ctx context.Context,
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_postByPostId_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_postSuggestions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_postSuggestions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PostSuggestions(rctx, fc.Args["userID"].(string), fc.Args["skipPostID"].(string), fc.Args["limit"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Post)
+	fc.Result = res
+	return ec.marshalNPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPostᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_postSuggestions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Post_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_Post_user_id(ctx, field)
+			case "caption":
+				return ec.fieldContext_Post_caption(ctx, field)
+			case "is_hide_like":
+				return ec.fieldContext_Post_is_hide_like(ctx, field)
+			case "is_hide_comment":
+				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
+			case "active":
+				return ec.fieldContext_Post_active(ctx, field)
+			case "user":
+				return ec.fieldContext_Post_user(ctx, field)
+			case "post_files":
+				return ec.fieldContext_Post_post_files(ctx, field)
+			case "post_likes":
+				return ec.fieldContext_Post_post_likes(ctx, field)
+			case "post_comments":
+				return ec.fieldContext_Post_post_comments(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Post_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Post_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Post_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Post", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_postSuggestions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -6443,6 +6575,81 @@ func (ec *executionContext) fieldContext_UserProfile_username(_ context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _UserProfile_user(ctx context.Context, field graphql.CollectedField, obj *model.UserProfile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserProfile_user(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserProfile().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalOUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserProfile_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserProfile",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "full_name":
+				return ec.fieldContext_User_full_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "phone":
+				return ec.fieldContext_User_phone(ctx, field)
+			case "avatar":
+				return ec.fieldContext_User_avatar(ctx, field)
+			case "bio":
+				return ec.fieldContext_User_bio(ctx, field)
+			case "birthday":
+				return ec.fieldContext_User_birthday(ctx, field)
+			case "gender":
+				return ec.fieldContext_User_gender(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			case "active":
+				return ec.fieldContext_User_active(ctx, field)
+			case "is_private":
+				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
+			case "created_at":
+				return ec.fieldContext_User_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_User_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_User_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserProfile_posts(ctx context.Context, field graphql.CollectedField, obj *model.UserProfile) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserProfile_posts(ctx, field)
 	if err != nil {
@@ -6464,14 +6671,11 @@ func (ec *executionContext) _UserProfile_posts(ctx context.Context, field graphq
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.([]*model.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPostᚄ(ctx, field.Selections, res)
+	return ec.marshalOPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPost(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserProfile_posts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6512,70 +6716,6 @@ func (ec *executionContext) fieldContext_UserProfile_posts(_ context.Context, fi
 				return ec.fieldContext_Post_deleted_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Post", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserProfile_friends(ctx context.Context, field graphql.CollectedField, obj *model.UserProfile) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserProfile_friends(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.UserProfile().Friends(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Friend)
-	fc.Result = res
-	return ec.marshalNFriend2ᚕᚖoutstagramᚋgraphᚋmodelᚐFriendᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserProfile_friends(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserProfile",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Friend_id(ctx, field)
-			case "from_user_id":
-				return ec.fieldContext_Friend_from_user_id(ctx, field)
-			case "to_user_id":
-				return ec.fieldContext_Friend_to_user_id(ctx, field)
-			case "status":
-				return ec.fieldContext_Friend_status(ctx, field)
-			case "from_user_info":
-				return ec.fieldContext_Friend_from_user_info(ctx, field)
-			case "to_user_info":
-				return ec.fieldContext_Friend_to_user_info(ctx, field)
-			case "created_at":
-				return ec.fieldContext_Friend_created_at(ctx, field)
-			case "updated_at":
-				return ec.fieldContext_Friend_updated_at(ctx, field)
-			case "deleted_at":
-				return ec.fieldContext_Friend_deleted_at(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Friend", field.Name)
 		},
 	}
 	return fc, nil
@@ -10015,6 +10155,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "postSuggestions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_postSuggestions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "postHomePage":
 			field := field
 
@@ -10231,19 +10393,16 @@ func (ec *executionContext) _UserProfile(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "posts":
+		case "user":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._UserProfile_posts(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
+				res = ec._UserProfile_user(ctx, field, obj)
 				return res
 			}
 
@@ -10267,19 +10426,16 @@ func (ec *executionContext) _UserProfile(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "friends":
+		case "posts":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._UserProfile_friends(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
+				res = ec._UserProfile_posts(ctx, field, obj)
 				return res
 			}
 
@@ -10835,60 +10991,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNFriend2ᚕᚖoutstagramᚋgraphᚋmodelᚐFriendᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Friend) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNFriend2ᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNFriend2ᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx context.Context, sel ast.SelectionSet, v *model.Friend) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Friend(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {

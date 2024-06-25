@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"outstagram/common"
 	"outstagram/graph/model"
+	"outstagram/models/entity"
 
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -165,9 +166,7 @@ func (r *queryResolver) UserByUsername(ctx context.Context, username string) (*m
 func (r *queryResolver) UserProfile(ctx context.Context, username string) (*model.UserProfile, error) {
 	var userProfile = &model.UserProfile{
 		Username: username,
-		User:     &model.User{},
 		Posts:    []*model.Post{},
-		Friends:  []*model.User{},
 	}
 
 	return userProfile, nil
@@ -225,6 +224,18 @@ func (r *queryResolver) PostByPostID(ctx context.Context, postID string) (*model
 	return post, nil
 }
 
+// PostSuggestions is the resolver for the postSuggestions field.
+func (r *queryResolver) PostSuggestions(ctx context.Context, userID string, skipPostID string, limit int) ([]*model.Post, error) {
+	userInfo, isOk := ctx.Value(common.UserInfoLocalKey).(entity.User)
+
+	var posts []*model.Post
+	if err := r.postService.PostGetSuggestions(isOk, userInfo, userID, skipPostID, limit, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
 // PostHomePage is the resolver for the postHomePage field.
 func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Post, error) {
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
@@ -280,6 +291,16 @@ func (r *userResolver) Friends(ctx context.Context, obj *model.User) ([]*model.F
 	return friends, nil
 }
 
+// User is the resolver for the user field.
+func (r *userProfileResolver) User(ctx context.Context, obj *model.UserProfile) (*model.User, error) {
+	var userRecord *model.User
+	if err := r.userService.UserGetByUserName(obj.Username, &userRecord); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return userRecord, nil
+}
+
 // Posts is the resolver for the posts field.
 func (r *userProfileResolver) Posts(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error) {
 	var posts []*model.Post
@@ -288,16 +309,6 @@ func (r *userProfileResolver) Posts(ctx context.Context, obj *model.UserProfile)
 	}
 
 	return posts, nil
-}
-
-// Friends is the resolver for the friends field.
-func (r *userProfileResolver) Friends(ctx context.Context, obj *model.UserProfile) ([]*model.Friend, error) {
-	var friends []*model.Friend
-	if err := r.friendService.GetAllFriendsByUserName(obj.Username, &friends); err != nil {
-		return nil, gqlerror.Errorf(err.Error())
-	}
-
-	return friends, nil
 }
 
 // Posts is the resolver for the posts field.
