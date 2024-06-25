@@ -270,18 +270,14 @@ func (r *queryResolver) InboxGetAllBubble(ctx context.Context) ([]*model.InboxGe
 	return inboxBubbleRecords, nil
 }
 
-// User is the resolver for the user field.
-func (r *userProfileResolver) User(ctx context.Context, obj *model.UserProfile) (*model.User, error) {
-	var userRecord *model.User
-	if err := r.userService.UserGetByUserName(obj.Username, &userRecord); err != nil {
+// Friends is the resolver for the friends field.
+func (r *userResolver) Friends(ctx context.Context, obj *model.User) ([]*model.Friend, error) {
+	var friends []*model.Friend
+	if err := r.friendService.GetAllFriendsByUserName(obj.Username, &friends); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
-	if userRecord.ID == "" {
-		return nil, gqlerror.Errorf("user not found")
-	}
-
-	return userRecord, nil
+	return friends, nil
 }
 
 // Posts is the resolver for the posts field.
@@ -342,6 +338,9 @@ func (r *Resolver) PostLike() PostLikeResolver { return &postLikeResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// User returns UserResolver implementation.
+func (r *Resolver) User() UserResolver { return &userResolver{r} }
+
 // UserProfile returns UserProfileResolver implementation.
 func (r *Resolver) UserProfile() UserProfileResolver { return &userProfileResolver{r} }
 
@@ -354,5 +353,6 @@ type postResolver struct{ *Resolver }
 type postCommentResolver struct{ *Resolver }
 type postLikeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type userResolver struct{ *Resolver }
 type userProfileResolver struct{ *Resolver }
 type userSuggestionResolver struct{ *Resolver }

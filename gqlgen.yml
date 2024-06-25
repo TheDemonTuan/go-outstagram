@@ -101,8 +101,6 @@ models:
         resolver: true
       posts:
         resolver: true
-      friends:
-        resolver: true
   Friend:
     fields:
       from_user_info:
@@ -132,4 +130,8 @@ models:
   PostLike:
     fields:
       user:
+        resolver: true
+  User:
+    fields:
+      friends:
         resolver: true

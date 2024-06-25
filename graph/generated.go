@@ -45,6 +45,7 @@ type ResolverRoot interface {
 	PostComment() PostCommentResolver
 	PostLike() PostLikeResolver
 	Query() QueryResolver
+	User() UserResolver
 	UserProfile() UserProfileResolver
 	UserSuggestion() UserSuggestionResolver
 }
@@ -172,6 +173,7 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		DeletedAt func(childComplexity int) int
 		Email     func(childComplexity int) int
+		Friends   func(childComplexity int) int
 		FullName  func(childComplexity int) int
 		Gender    func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -185,7 +187,6 @@ type ComplexityRoot struct {
 	UserProfile struct {
 		Friends  func(childComplexity int) int
 		Posts    func(childComplexity int) int
-		User     func(childComplexity int) int
 		Username func(childComplexity int) int
 	}
 
@@ -243,8 +244,10 @@ type QueryResolver interface {
 	InboxGetByUsername(ctx context.Context, username string) ([]*model.Inbox, error)
 	InboxGetAllBubble(ctx context.Context) ([]*model.InboxGetAllBubble, error)
 }
+type UserResolver interface {
+	Friends(ctx context.Context, obj *model.User) ([]*model.Friend, error)
+}
 type UserProfileResolver interface {
-	User(ctx context.Context, obj *model.UserProfile) (*model.User, error)
 	Posts(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error)
 	Friends(ctx context.Context, obj *model.UserProfile) ([]*model.Friend, error)
 }
@@ -949,6 +952,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Email(childComplexity), true
 
+	case "User.friends":
+		if e.complexity.User.Friends == nil {
+			break
+		}
+
+		return e.complexity.User.Friends(childComplexity), true
+
 	case "User.full_name":
 		if e.complexity.User.FullName == nil {
 			break
@@ -1018,13 +1028,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserProfile.Posts(childComplexity), true
-
-	case "UserProfile.user":
-		if e.complexity.UserProfile.User == nil {
-			break
-		}
-
-		return e.complexity.UserProfile.User(childComplexity), true
 
 	case "UserProfile.username":
 		if e.complexity.UserProfile.Username == nil {
@@ -1645,6 +1648,8 @@ func (ec *executionContext) fieldContext_Friend_from_user_info(_ context.Context
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -1718,6 +1723,8 @@ func (ec *executionContext) fieldContext_Friend_to_user_info(_ context.Context, 
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -2187,6 +2194,8 @@ func (ec *executionContext) fieldContext_Inbox_from_user_info(_ context.Context,
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -2260,6 +2269,8 @@ func (ec *executionContext) fieldContext_Inbox_to_user_info(_ context.Context, f
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -3347,6 +3358,8 @@ func (ec *executionContext) fieldContext_Post_user(_ context.Context, field grap
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -3981,6 +3994,8 @@ func (ec *executionContext) fieldContext_PostComment_user(_ context.Context, fie
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -4749,6 +4764,8 @@ func (ec *executionContext) fieldContext_PostLike_user(_ context.Context, field 
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -4948,6 +4965,8 @@ func (ec *executionContext) fieldContext_Query_userByUsername(ctx context.Contex
 				return ec.fieldContext_User_active(ctx, field)
 			case "is_private":
 				return ec.fieldContext_User_is_private(ctx, field)
+			case "friends":
+				return ec.fieldContext_User_friends(ctx, field)
 			case "created_at":
 				return ec.fieldContext_User_created_at(ctx, field)
 			case "updated_at":
@@ -5013,8 +5032,6 @@ func (ec *executionContext) fieldContext_Query_userProfile(ctx context.Context, 
 			switch field.Name {
 			case "username":
 				return ec.fieldContext_UserProfile_username(ctx, field)
-			case "user":
-				return ec.fieldContext_UserProfile_user(ctx, field)
 			case "posts":
 				return ec.fieldContext_UserProfile_posts(ctx, field)
 			case "friends":
@@ -5765,11 +5782,14 @@ func (ec *executionContext) _User_username(ctx context.Context, field graphql.Co
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_username(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6195,6 +6215,67 @@ func (ec *executionContext) fieldContext_User_is_private(_ context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _User_friends(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_friends(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().Friends(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Friend)
+	fc.Result = res
+	return ec.marshalOFriend2ᚕᚖoutstagramᚋgraphᚋmodelᚐFriend(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_friends(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Friend_id(ctx, field)
+			case "from_user_id":
+				return ec.fieldContext_Friend_from_user_id(ctx, field)
+			case "to_user_id":
+				return ec.fieldContext_Friend_to_user_id(ctx, field)
+			case "status":
+				return ec.fieldContext_Friend_status(ctx, field)
+			case "from_user_info":
+				return ec.fieldContext_Friend_from_user_info(ctx, field)
+			case "to_user_info":
+				return ec.fieldContext_Friend_to_user_info(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Friend_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Friend_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Friend_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Friend", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _User_created_at(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_created_at(ctx, field)
 	if err != nil {
@@ -6357,82 +6438,6 @@ func (ec *executionContext) fieldContext_UserProfile_username(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UserProfile_user(ctx context.Context, field graphql.CollectedField, obj *model.UserProfile) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserProfile_user(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.UserProfile().User(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_UserProfile_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UserProfile",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "username":
-				return ec.fieldContext_User_username(ctx, field)
-			case "full_name":
-				return ec.fieldContext_User_full_name(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "phone":
-				return ec.fieldContext_User_phone(ctx, field)
-			case "avatar":
-				return ec.fieldContext_User_avatar(ctx, field)
-			case "bio":
-				return ec.fieldContext_User_bio(ctx, field)
-			case "birthday":
-				return ec.fieldContext_User_birthday(ctx, field)
-			case "gender":
-				return ec.fieldContext_User_gender(ctx, field)
-			case "role":
-				return ec.fieldContext_User_role(ctx, field)
-			case "active":
-				return ec.fieldContext_User_active(ctx, field)
-			case "is_private":
-				return ec.fieldContext_User_is_private(ctx, field)
-			case "created_at":
-				return ec.fieldContext_User_created_at(ctx, field)
-			case "updated_at":
-				return ec.fieldContext_User_updated_at(ctx, field)
-			case "deleted_at":
-				return ec.fieldContext_User_deleted_at(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
@@ -10121,10 +10126,13 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "username":
 			out.Values[i] = ec._User_username(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "full_name":
 			out.Values[i] = ec._User_full_name(ctx, field, obj)
 		case "email":
@@ -10145,6 +10153,39 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._User_active(ctx, field, obj)
 		case "is_private":
 			out.Values[i] = ec._User_is_private(ctx, field, obj)
+		case "friends":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_friends(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._User_created_at(ctx, field, obj)
 		case "updated_at":
@@ -10190,42 +10231,6 @@ func (ec *executionContext) _UserProfile(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "user":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._UserProfile_user(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "posts":
 			field := field
 
