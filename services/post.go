@@ -10,11 +10,14 @@ import (
 	"mime/multipart"
 	"os"
 	"outstagram/common"
+	"outstagram/graph/model"
 	"outstagram/models/entity"
 	"strings"
 )
 
-type PostService struct{}
+type PostService struct {
+	friendService *FriendService
+}
 
 func NewPostService() *PostService {
 	return &PostService{}
@@ -53,61 +56,114 @@ func (p *PostService) PostGetAllByUserName(username string, posts interface{}) e
 	return nil
 }
 
-func (p *PostService) PostGetAllByPostID(isOk bool, postID string, postRecords interface{}) error {
-	if !isOk {
-		if err := common.DBConn.Model(&entity.Post{}).Where("id = ? AND privacy IN ?", postID, []entity.PostPrivacy{entity.PostPublic}).Find(postRecords).Error; err != nil {
-			return errors.New("error while querying post")
-		}
-		return nil
-	}
-
-	if err := common.DBConn.Where("id = ? AND privacy IN ?", postID, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Find(postRecords).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *PostService) PostGetSuggestions(isOK bool, userMeInfo entity.User, userID, skipPostID string, limit int, postRecords interface{}) error {
+func (p *PostService) PostProfileGetAllByUserName(isOK bool, currentUserID, username string, posts interface{}) error {
 	var user entity.User
-	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := common.DBConn.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
 		return errors.New("error while querying user")
 	}
 
-	var post entity.Post
-	if err := common.DBConn.Where("id = ? AND user_id = ?", skipPostID, user.ID.String()).First(&post).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("post not found")
-		}
-		return errors.New("error while querying post")
-
-	}
-
 	if isOK {
-		isFriend := true
-		var friendRecords entity.Friend
-		if err := common.DBConn.Where("((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = ?", userMeInfo.ID.String(), userID, userID, userMeInfo.ID.String(), entity.FriendAccepted).First(&friendRecords).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				isFriend = false
-			} else {
-				return errors.New("error while querying friend")
+		if currentUserID == user.ID.String() {
+			if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ?", user.ID).Order("created_at desc").Find(posts).Error; err != nil {
+				return errors.New("error while querying post")
 			}
+			return nil
+		}
+
+		isFriend := true
+		var friendRecord entity.Friend
+		if err := p.friendService.GetFriendByUserID(&friendRecord, currentUserID, user.ID.String()); err != nil {
+			isFriend = false
 		}
 
 		if isFriend {
-			if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", userID, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Limit(limit).Find(postRecords).Error; err != nil {
+			if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ?", user.ID.String(), []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Find(posts).Error; err != nil {
 				return errors.New("error while querying posts")
 			}
 			return nil
 		}
 	}
 
-	if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", userID, []entity.PostPrivacy{entity.PostPublic}).Limit(limit).Find(postRecords).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ?", user.ID.String(), []entity.PostPrivacy{entity.PostPublic}).Order("created_at desc").Find(posts).Error; err != nil {
 		return errors.New("error while querying post")
 	}
+
+	return nil
+}
+
+func (p *PostService) PostByPostID(isOk bool, currentUserID, postID string, postRecords interface{}) error {
+	if err := common.DBConn.Model(entity.Post{}).Where("id = ?", postID).First(postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("post not found")
+		}
+		return errors.New("error while querying post")
+	}
+
+	post := postRecords.(**model.Post)
+
+	if isOk {
+		if currentUserID == (*post).UserID {
+			return nil
+		}
+
+		isFriend := true
+		var friendRecord entity.Friend
+		if err := p.friendService.GetFriendByUserID(&friendRecord, currentUserID, (*post).UserID); err != nil {
+			isFriend = false
+		}
+
+		if isFriend {
+			if (*post).Privacy == entity.PostOnlyFriend || (*post).Privacy == entity.PostPublic {
+				return nil
+			}
+		}
+	}
+
+	if (*post).Privacy == entity.PostPublic {
+		return nil
+	}
+
+	return errors.New("post is private")
+}
+
+func (p *PostService) PostGetSuggestions(isOK bool, currentUserID, skipPostID string, limit int, postRecords interface{}) error {
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", skipPostID).First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("skip post not found")
+		}
+		return errors.New("skip error while querying post")
+
+	}
+	if isOK {
+		if currentUserID == post.UserID.String() {
+			if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ?", post.UserID).Order("created_at desc").Limit(limit).Find(postRecords).Error; err != nil {
+				return errors.New("error while querying post")
+			}
+			return nil
+		}
+
+		isFriend := true
+		var friendRecord entity.Friend
+		if err := p.friendService.GetFriendByUserID(&friendRecord, currentUserID, post.UserID.String()); err != nil {
+			isFriend = false
+		}
+
+		if isFriend {
+			if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", post.UserID.String(), []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Limit(limit).Find(postRecords).Error; err != nil {
+				return errors.New("error while querying posts")
+			}
+			return nil
+		}
+	}
+
+	if err := common.DBConn.Model(&entity.Post{}).Not("id = ?", skipPostID).Where("user_id = ? AND privacy IN ?", post.UserID.String(), []entity.PostPrivacy{entity.PostPublic}).Order("created_at desc").Limit(limit).Find(postRecords).Error; err != nil {
+		return errors.New("error while querying post")
+	}
+
 	return nil
 }
 

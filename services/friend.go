@@ -126,19 +126,19 @@ func (f *FriendService) GetFriendList(userID string) ([]entity.Friend, error) {
 func (f *FriendService) GetFriendByUserID(friendRecord *entity.Friend, fromUserID, toUserID string) error {
 	_, err := uuid.Parse(fromUserID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return errors.New("error when parsing fromUserID")
 	}
 
 	_, err = uuid.Parse(toUserID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return errors.New("error when parsing toUserID")
 	}
 
-	if err := common.DBConn.Where("from_user_id = ? AND to_user_id = ? or from_user_id = ? AND to_user_id = ?", fromUserID, toUserID, toUserID, fromUserID).First(&friendRecord).Error; err != nil {
+	if err := common.DBConn.Where("(from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?) AND status = ?", fromUserID, toUserID, toUserID, fromUserID, entity.FriendAccepted).First(&friendRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "Friend not found")
+			return errors.New("friend not found")
 		}
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return errors.New("error when querying friend record")
 	}
 
 	return nil
@@ -193,28 +193,4 @@ func (f *FriendService) GetAllFriendsByUserName(userName string, friends interfa
 	}
 
 	return nil
-}
-
-func filterFriend(friends []entity.Friend, userID string) []uuid.UUID {
-	var friendList []uuid.UUID
-	for _, friend := range friends {
-		if friend.FromUserID.String() == userID {
-			friendList = append(friendList, friend.ToUserID)
-		} else {
-			friendList = append(friendList, friend.FromUserID)
-		}
-	}
-
-	return friendList
-}
-
-func filterFriendByStatus(friends []entity.Friend, userID string, status entity.FriendStatus) []entity.Friend {
-	var friendList []entity.Friend
-	for _, friend := range friends {
-		if friend.Status == status {
-			friendList = append(friendList, friend)
-		}
-	}
-
-	return friendList
 }

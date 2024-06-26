@@ -7,11 +7,9 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"outstagram/common"
 	"outstagram/graph/model"
-	"outstagram/models/entity"
-
-	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // FromUserInfo is the resolver for the from_user_info field.
@@ -73,6 +71,12 @@ func (r *inboxResolver) ToUserInfo(ctx context.Context, obj *model.Inbox) (*mode
 	}
 
 	return userRecord, nil
+}
+
+// Privacy is the resolver for the privacy field.
+func (r *postResolver) Privacy(ctx context.Context, obj *model.Post) (*int, error) {
+	var privacy = int(obj.Privacy)
+	return &privacy, nil
 }
 
 // User is the resolver for the user field.
@@ -214,10 +218,10 @@ func (r *queryResolver) PostByUsername(ctx context.Context, username string) ([]
 
 // PostByPostID is the resolver for the postByPostId field.
 func (r *queryResolver) PostByPostID(ctx context.Context, postID string) (*model.Post, error) {
-	_, isOk := ctx.Value(common.UserIDLocalKey).(string)
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 
 	var post *model.Post
-	if err := r.postService.PostGetAllByPostID(isOk, postID, &post); err != nil {
+	if err := r.postService.PostByPostID(isOk, currentUserID, postID, &post); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -226,10 +230,10 @@ func (r *queryResolver) PostByPostID(ctx context.Context, postID string) (*model
 
 // PostSuggestions is the resolver for the postSuggestions field.
 func (r *queryResolver) PostSuggestions(ctx context.Context, userID string, skipPostID string, limit int) ([]*model.Post, error) {
-	userInfo, isOk := ctx.Value(common.UserInfoLocalKey).(entity.User)
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 
 	var posts []*model.Post
-	if err := r.postService.PostGetSuggestions(isOk, userInfo, userID, skipPostID, limit, &posts); err != nil {
+	if err := r.postService.PostGetSuggestions(isOk, currentUserID, skipPostID, limit, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -303,8 +307,10 @@ func (r *userProfileResolver) User(ctx context.Context, obj *model.UserProfile) 
 
 // Posts is the resolver for the posts field.
 func (r *userProfileResolver) Posts(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error) {
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
+
 	var posts []*model.Post
-	if err := r.postService.PostGetAllByUserName(obj.Username, &posts); err != nil {
+	if err := r.postService.PostProfileGetAllByUserName(isOk, currentUserID, obj.Username, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 

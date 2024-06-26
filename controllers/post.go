@@ -13,12 +13,14 @@ import (
 )
 
 type PostController struct {
-	postService *services.PostService
+	postService   *services.PostService
+	friendService *services.FriendService
 }
 
-func NewPostController(postService *services.PostService) *PostController {
+func NewPostController(postService *services.PostService, friendService *services.FriendService) *PostController {
 	return &PostController{
-		postService: postService,
+		postService:   postService,
+		friendService: friendService,
 	}
 }
 

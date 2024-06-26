@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/99designs/gqlgen v0.17.49
-	github.com/bytedance/sonic v1.11.8
+	github.com/bytedance/sonic v1.11.9
 	github.com/cloudinary/cloudinary-go/v2 v2.7.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/gofiber/contrib/jwt v1.0.9
@@ -32,8 +32,8 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/gorilla/schema v1.3.0 // indirect
-	github.com/gorilla/websocket v1.5.2 // indirect
+	github.com/gorilla/schema v1.4.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

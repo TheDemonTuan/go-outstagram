@@ -1,13 +1,15 @@
 package model
 
+import "outstagram/models/entity"
+
 type Post struct {
-	ID            string `json:"id"`
-	UserID        string `json:"user_id"`
-	Caption       string `json:"caption"`
-	IsHideLike    bool   `json:"is_hide_like"`
-	IsHideComment bool   `json:"is_hide_comment"`
-	Privacy       int    `json:"privacy"`
-	Active        bool   `json:"active"`
+	ID            string             `json:"id"`
+	UserID        string             `json:"user_id"`
+	Caption       string             `json:"caption"`
+	IsHideLike    bool               `json:"is_hide_like"`
+	IsHideComment bool               `json:"is_hide_comment"`
+	Privacy       entity.PostPrivacy `json:"privacy"`
+	Active        bool               `json:"active"`
 
 	User         *User          `json:"user"`
 	PostFiles    []*PostFile    `json:"post_files"`

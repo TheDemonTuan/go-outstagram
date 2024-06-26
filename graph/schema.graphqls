@@ -170,7 +170,7 @@ type Query {
     # posts
     postByUsername(username: String!): [Post!]!
     postByPostId(postID: String!): Post!
-    postSuggestions(userID: String!,skipPostID: String!, limit: Int!): [Post!]!
+    postSuggestions(skipPostID: String!, limit: Int!): [Post!]!
     postHomePage(page: Int!): [Post!]!
     # inbox
     inboxGetByUsername(username: String!): [Inbox!]!
