@@ -354,6 +354,10 @@ func (u *UserService) UserMeDeleteAvatarSaveToDB(ctx *fiber.Ctx) error {
 func (u *UserService) UserEditPasswordSaveToDB(ctx *fiber.Ctx, bodyData *req.UserMeUpdatePassword) error {
 	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 
+	if bodyData.CurrentPassword == bodyData.NewPassword {
+		return fiber.NewError(fiber.StatusBadRequest, "new password cannot be the same as the current password")
+	}
+
 	err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(bodyData.CurrentPassword))
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "current password is incorrect")
