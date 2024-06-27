@@ -175,36 +175,47 @@ func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	return nil
 }
 
-func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, []*multipart.FileHeader, error) {
+func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, string, []*multipart.FileHeader, error) {
 	if body == nil {
-		return "", nil, errors.New("request body is required")
+		return "", "", nil, errors.New("request body is required")
 	}
 
 	if body.Value == nil {
-		return "", nil, errors.New("request body value is required")
+		return "", "", nil, errors.New("request body value is required")
 	}
 
 	if body.File == nil {
-		return "", nil, errors.New("request body file is required")
+		return "", "", nil, errors.New("request body file is required")
 	}
 
 	caption := body.Value["caption"]
+	privacy := body.Value["privacy"]
 	files := body.File["files"]
 
 	if len(caption) == 0 || len(caption[0]) == 0 {
-		return "", nil, errors.New("caption is required")
+		return "", "", nil, errors.New("caption is required")
 	}
 
 	if len(caption[0]) > 2200 {
-		return "", nil, errors.New("caption is too long")
+		return "", "", nil, errors.New("caption is too long")
+	}
+
+	if len(privacy) == 0 || len(privacy[0]) == 0 {
+		return "", "", nil, errors.New("privacy is required")
+
+	}
+
+	if privacy[0] != "0" && privacy[0] != "1" && privacy[0] != "2" {
+		return "", "", nil, errors.New("privacy is invalid")
+
 	}
 
 	if len(files) == 0 {
-		return "", nil, errors.New("files are required")
+		return "", "", nil, errors.New("files are required")
 	}
 
 	if len(files) > 10 {
-		return "", nil, errors.New("files are too many")
+		return "", "", nil, errors.New("files are too many")
 	}
 
 	acceptType := map[string]bool{
@@ -217,11 +228,11 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, [
 
 	for _, file := range files {
 		if !acceptType[file.Header["Content-Type"][0]] {
-			return "", nil, errors.New(file.Filename + "file type is not supported")
+			return "", "", nil, errors.New(file.Filename + "file type is not supported")
 		}
 	}
 
-	return caption[0], files, nil
+	return caption[0], privacy[0], files, nil
 }
 
 func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.FileHeader) ([]string, []*uploader.UploadResult, error) {
@@ -298,12 +309,13 @@ func (p *PostService) PostCreateDeleteFiles(localPaths []string, cloudinaryPaths
 	return nil
 }
 
-func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, privacy entity.PostPrivacy, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
 	newPostID := "TD" + common.RandomNString(18)
 	newPost := entity.Post{
 		ID:      newPostID,
 		UserID:  userID,
 		Caption: strings.Trim(caption, " "),
+		Privacy: privacy,
 	}
 
 	for _, filePath := range cloudinaryPaths {
@@ -387,17 +399,11 @@ func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption 
 		}
 		return entity.Post{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
 	}
-
-	if caption == postRecord.Caption {
-		return postRecord, nil
+	if postRecord.Caption == caption && postRecord.Privacy == privacy {
+		return entity.Post{}, fiber.NewError(fiber.StatusBadRequest, "Nothing to update")
 	}
 
 	postRecord.Caption = strings.Trim(caption, " ")
-
-	if privacy == postRecord.Privacy {
-		return postRecord, nil
-	}
-
 	postRecord.Privacy = privacy
 
 	if err := common.DBConn.Save(&postRecord).Error; err != nil {

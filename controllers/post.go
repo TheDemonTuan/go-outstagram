@@ -9,6 +9,7 @@ import (
 	"outstagram/models/entity"
 	"outstagram/models/req"
 	"outstagram/services"
+	"strconv"
 	"strings"
 )
 
@@ -44,7 +45,7 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	caption, files, err := p.postService.PostCreateValidateRequest(form)
+	caption, privacy, files, err := p.postService.PostCreateValidateRequest(form)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -57,7 +58,12 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	userID := uuid.MustParse(rawUserID)
 
-	newPost, err := p.postService.PostCreateByUserID(userID, caption, localPaths, cloudinaryPaths)
+	privacyInt, err := strconv.Atoi(privacy)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	newPost, err := p.postService.PostCreateByUserID(userID, caption, entity.PostPrivacy(privacyInt), localPaths, cloudinaryPaths)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
