@@ -13,7 +13,7 @@ type User struct {
 	Role      *bool     `json:"role,omitempty"`
 	Active    *bool     `json:"active,omitempty"`
 	IsPrivate *bool     `json:"is_private,omitempty"`
-	Friends   []*Friend `json:"friends,omitempty" gorm:"-"`
+	Friends   []*Friend `json:"friends" gorm:"-"`
 	CreatedAt *string   `json:"created_at,omitempty"`
 	UpdatedAt *string   `json:"updated_at,omitempty"`
 	DeletedAt *string   `json:"deleted_at,omitempty"`
@@ -33,6 +33,6 @@ type UserSuggestion struct {
 	Role     bool   `json:"role"`
 	Active   bool   `json:"active"`
 
-	Posts   []*Post `json:"posts"`
-	Friends []*User `json:"friends"`
+	Posts   []*Post `json:"posts" gorm:"-"`
+	Friends []*User `json:"friends" gorm:"-"`
 }

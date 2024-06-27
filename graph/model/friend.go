@@ -10,6 +10,6 @@ type Friend struct {
 	UpdatedAt string `json:"updated_at"`
 	DeletedAt string `json:"deleted_at"`
 
-	FromUserInfo *User `json:"from_user_info,omitempty" gorm:"-"`
-	ToUserInfo   *User `json:"to_user_info,omitempty" gorm:"-"`
+	FromUserInfo *User `json:"from_user_info" gorm:"-"`
+	ToUserInfo   *User `json:"to_user_info" gorm:"-"`
 }
