@@ -12,7 +12,7 @@ import (
 
 func Protected() fiber.Handler {
 	return jwtware.New(jwtware.Config{
-		SigningKey:     jwtware.SigningKey{Key: []byte(os.Getenv("JWT_SECRET"))},
+		SigningKey:     jwtware.SigningKey{Key: []byte(os.Getenv("ACCESS_TOKEN_SECRET"))},
 		SuccessHandler: jwtSuccess,
 		ErrorHandler:   jwtError,
 	})
@@ -22,6 +22,7 @@ func jwtSuccess(c *fiber.Ctx) error {
 	user := c.Locals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 	userID, ok := claims["uuid"].(string)
+
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
@@ -30,10 +31,6 @@ func jwtSuccess(c *fiber.Ctx) error {
 	var userRecord entity.User
 	if err := userService.UserGetByID(userID, &userRecord); err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
-	}
-
-	if !userRecord.Active {
-		return fiber.NewError(fiber.StatusUnauthorized, "User is not active")
 	}
 
 	c.Locals(common.UserIDLocalKey, userID)
@@ -45,10 +42,6 @@ func jwtSuccess(c *fiber.Ctx) error {
 func jwtError(c *fiber.Ctx, err error) error {
 	if c.Path() == "/graphql" || c.Path() == "/graphql/playground" {
 		return c.Next()
-	}
-
-	if err.Error() == "Missing or malformed JWT" {
-		return fiber.NewError(fiber.StatusUnauthorized, "Missing or malformed JWT")
 	}
 
 	return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")

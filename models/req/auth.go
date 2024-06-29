@@ -14,3 +14,11 @@ type AuthRegister struct {
 	FullName string    `json:"full_name" validate:"required,min=3,max=100"`
 	Birthday time.Time `json:"birthday" validate:"required"`
 }
+
+type AuthRefreshToken struct {
+	RefreshToken string `json:"refresh_token" validate:"required,jwt"`
+}
+
+type AuthLogout struct {
+	RefreshToken string `json:"refresh_token" validate:"required,jwt"`
+}

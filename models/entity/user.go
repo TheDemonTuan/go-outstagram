@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+type UserOAuth int
+
+const (
+	Default UserOAuth = iota
+	Facebook
+)
+
 type User struct {
 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	Username  string    `json:"username" gorm:"uniqueIndex;not null;size:50" `
@@ -18,6 +25,7 @@ type User struct {
 	Birthday  time.Time `json:"birthday" gorm:"not null"`
 	Gender    bool      `json:"gender" gorm:"default:false"`
 	Role      bool      `json:"role" gorm:"default:false"`
+	OAuth     UserOAuth `json:"oauth" gorm:"default:0"`
 	Active    bool      `json:"active" gorm:"default:true"`
 	IsPrivate bool      `json:"is_private" gorm:"default:false"`
 
@@ -28,6 +36,7 @@ type User struct {
 	ToFriends    []Friend      `json:"to_friends" gorm:"foreignKey:ToUserID;references:ID"`
 	InboxFrom    []Inbox       `json:"inbox_from" gorm:"foreignKey:FromUserID;references:ID"`
 	InboxTo      []Inbox       `json:"inbox_to" gorm:"foreignKey:ToUserID;references:ID"`
+	Token        []Token       `json:"tokens" gorm:"foreignKey:UserID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

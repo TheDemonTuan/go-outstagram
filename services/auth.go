@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"os"
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
@@ -14,7 +15,10 @@ import (
 	"time"
 )
 
-type AuthService struct{}
+type AuthService struct {
+	userService  *UserService
+	tokenService *TokenService
+}
 
 func NewAuthService() *AuthService {
 	return &AuthService{}
@@ -79,28 +83,64 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 	return newUser, nil
 }
 
-func (s *AuthService) VerifyUser(currentUserID string) (*entity.User, error) {
-	var user entity.User
-	if err := common.DBConn.First(&user, "id = ?", currentUserID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
-		}
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
-	}
-	return &user, nil
-}
-
-func (s *AuthService) CreateJWT(userId uuid.UUID) (string, error) {
+func (s *AuthService) GenerateAccessToken(userId string) (string, error) {
 	claims := jwt.MapClaims{
-		"uuid": userId.String(),
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
+		"uuid": userId,
+		"exp":  time.Now().Add(time.Minute * 30).Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenSigned, tokenSignedErr := token.SignedString([]byte("secret"))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	tokenSigned, tokenSignedErr := token.SignedString([]byte(os.Getenv("ACCESS_TOKEN_SECRET")))
 	if tokenSignedErr != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "Error while signing token")
+		return "", fiber.NewError(fiber.StatusInternalServerError, "Error while signing access token")
 	}
 
 	return tokenSigned, nil
+}
+
+func (s *AuthService) GenerateRefreshToken(userId string) (string, error) {
+	exp := time.Now().Add(time.Hour * 24 * 15)
+
+	claims := jwt.MapClaims{
+		"uuid": userId,
+		"exp":  exp.Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	tokenSigned, tokenSignedErr := token.SignedString([]byte(os.Getenv("REFRESH_TOKEN_SECRET")))
+	if tokenSignedErr != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "Error while signing refresh token")
+	}
+
+	if err := s.tokenService.SaveRefreshToken(userId, tokenSigned, exp); err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "Error while saving refresh token")
+	}
+
+	return tokenSigned, nil
+}
+
+func (s *AuthService) ValidateRefreshToken(refreshToken string) (string, error) {
+	claims := jwt.MapClaims{}
+	token, tokenErr := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("REFRESH_TOKEN_SECRET")), nil
+	})
+
+	if tokenErr != nil {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+	}
+
+	if !token.Valid {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+	}
+
+	userId, isOK := claims["uuid"].(string)
+	if !isOK {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+	}
+
+	if _, err := s.tokenService.GetRefreshTokenByToken(refreshToken); err != nil {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+	}
+
+	return userId, nil
 }
