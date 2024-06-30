@@ -144,6 +144,27 @@ func (f *FriendService) GetFriendByUserID(friendRecord *entity.Friend, fromUserI
 	return nil
 }
 
+func (f *FriendService) GetFriendStatusByUserID(friendRecord *entity.Friend, fromUserID, toUserID string) error {
+	_, err := uuid.Parse(fromUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	_, err = uuid.Parse(toUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	if err := common.DBConn.Where("(from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)", fromUserID, toUserID, toUserID, fromUserID).First(&friendRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Friend record not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error when querying friend record")
+	}
+
+	return nil
+}
+
 func (f *FriendService) AcceptFriendRequest(friendRecord *entity.Friend, fromUserID, toUserID string) error {
 	_, err := uuid.Parse(fromUserID)
 	if err != nil {

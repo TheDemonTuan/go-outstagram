@@ -11,7 +11,8 @@ func postRouter(r fiber.Router) {
 
 	postService := services.NewPostService()
 	friendService := services.NewFriendService()
-	postController := controllers.NewPostController(postService, friendService)
+	userService := services.NewUserService()
+	postController := controllers.NewPostController(postService, friendService, userService)
 
 	//Me API
 	postRoute.Add("GET", "me", postController.PostMeGetAll)

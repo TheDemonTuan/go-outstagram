@@ -11,17 +11,20 @@ import (
 	"outstagram/services"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PostController struct {
 	postService   *services.PostService
 	friendService *services.FriendService
+	userService   *services.UserService
 }
 
-func NewPostController(postService *services.PostService, friendService *services.FriendService) *PostController {
+func NewPostController(postService *services.PostService, friendService *services.FriendService, userService *services.UserService) *PostController {
 	return &PostController{
 		postService:   postService,
 		friendService: friendService,
+		userService:   userService,
 	}
 }
 
@@ -73,16 +76,32 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 
 func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
-	userID := uuid.MustParse(rawUserID)
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
 
-	postLike, err := p.postService.PostLikeByPostID(postID, userID)
+	postLike, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID)
 	if err != nil {
 		return err
 	}
 
 	if !postLike.IsLiked {
 		return common.CreateResponse(ctx, fiber.StatusOK, "Post unliked", postLike)
+	}
+
+	// Push notification
+	if currentUserInfo.ID != postLike.UserID {
+		data := map[string]string{}
+		data["type"] = "post-like"
+		data["message"] = currentUserInfo.Username + " liked your post!"
+		data["username"] = currentUserInfo.Username
+		data["avatar"] = currentUserInfo.Avatar
+		data["createdAt"] = time.Now().Format(time.RFC3339)
+
+		if err := common.PusherClient.Trigger(postLike.UserID.String(), "internal-socket", data); err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		}
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", postLike)
