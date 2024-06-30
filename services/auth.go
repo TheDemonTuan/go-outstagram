@@ -27,7 +27,7 @@ func NewAuthService() *AuthService {
 func (s *AuthService) AuthenticateUser(usernameOrEmailOrPhone, password string) (*entity.User, error) {
 	var userEntity entity.User
 
-	db := common.DBConn.Where("username = ? or email = ? or phone = ?", usernameOrEmailOrPhone, usernameOrEmailOrPhone, usernameOrEmailOrPhone)
+	db := common.DBConn.Where("username = ? OR email = ? OR phone = ? AND oauth = ?", usernameOrEmailOrPhone, usernameOrEmailOrPhone, usernameOrEmailOrPhone, entity.OAuthDefault)
 
 	if err := db.First(&userEntity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -51,6 +51,11 @@ func (s *AuthService) ValidateFullName(fullName string) bool {
 	return match
 }
 
+func (s *AuthService) IsUserAtLeast13(birthday time.Time) bool {
+	thirteenYearsAgo := time.Now().AddDate(-13, 0, 0)
+	return birthday.Before(thirteenYearsAgo) || birthday.Equal(thirteenYearsAgo)
+}
+
 func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error) {
 	var existingUser entity.User
 	if err := common.DBConn.First(&existingUser, "email = ? OR username = ?", bodyData.Email, bodyData.Username).Error; err != nil {
@@ -61,6 +66,10 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 
 	if existingUser.ID != uuid.Nil {
 		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User already exists")
+	}
+
+	if !s.IsUserAtLeast13(bodyData.Birthday) {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User must be at least 13 years old")
 	}
 
 	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(bodyData.Password), bcrypt.DefaultCost)
@@ -145,4 +154,60 @@ func (s *AuthService) ValidateRefreshToken(refreshToken string, isCheckDB bool) 
 	}
 
 	return userId, nil
+}
+
+func (s *AuthService) AuthOAuthLogin(bodyData *req.AuthOAuthLogin) (entity.User, error) {
+	if bodyData.Provider == entity.OAuthDefault.EnumIndex() {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "Invalid provider")
+	}
+
+	var userEntity entity.User
+	if err := common.DBConn.First(&userEntity, "email = ?", bodyData.Email).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User not found")
+		}
+		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	if userEntity.OAuth != entity.UserOAuth(bodyData.Provider) {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "Invalid provider")
+	}
+
+	return userEntity, nil
+}
+
+func (s *AuthService) AuthOAuthRegister(bodyData *req.AuthOAuthRegister) (entity.User, error) {
+	if bodyData.Provider == entity.OAuthDefault.EnumIndex() {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "Invalid provider")
+	}
+
+	var existingUser entity.User
+	if err := common.DBConn.First(&existingUser, "email = ? or username = ?", bodyData.Email, bodyData.Username).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+		}
+	}
+
+	if existingUser.ID != uuid.Nil {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User already exists")
+	}
+
+	if !s.IsUserAtLeast13(bodyData.Birthday) {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User must be at least 13 years old")
+	}
+
+	newUser := entity.User{
+		ID:       uuid.New(),
+		Username: bodyData.Username,
+		FullName: bodyData.FullName,
+		Email:    bodyData.Email,
+		Birthday: bodyData.Birthday,
+		OAuth:    entity.UserOAuth(bodyData.Provider),
+	}
+
+	if err := common.DBConn.Omit("phone").Create(&newUser).Error; err != nil {
+		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating user")
+	}
+
+	return newUser, nil
 }

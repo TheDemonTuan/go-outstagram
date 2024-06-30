@@ -137,3 +137,59 @@ func (c *AuthController) AuthLogout(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Logout successfully", nil)
 }
+
+func (c *AuthController) AuthOAuthLogin(ctx *fiber.Ctx) error {
+	bodyData, err := common.RequestBodyValidator[req.AuthOAuthLogin](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	userRecord, err := c.authService.AuthOAuthLogin(bodyData)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	accessToken, err := c.authService.GenerateAccessToken(userRecord.ID.String())
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	refreshToken, err := c.authService.GenerateRefreshToken(userRecord.ID.String())
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "OAuth successfully", fiber.Map{
+		"user":          userRecord,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
+}
+
+func (c *AuthController) AuthOAuthRegister(ctx *fiber.Ctx) error {
+	bodyData, err := common.RequestBodyValidator[req.AuthOAuthRegister](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	userRecord, err := c.authService.AuthOAuthRegister(bodyData)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	accessToken, err := c.authService.GenerateAccessToken(userRecord.ID.String())
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	refreshToken, err := c.authService.GenerateRefreshToken(userRecord.ID.String())
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusCreated, "OAuth successfully", fiber.Map{
+		"user":          userRecord,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
+}

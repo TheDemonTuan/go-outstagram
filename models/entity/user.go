@@ -9,9 +9,13 @@ import (
 type UserOAuth int
 
 const (
-	Default UserOAuth = iota
-	Facebook
+	OAuthDefault UserOAuth = iota
+	OAuthFacebook
 )
+
+func (u UserOAuth) EnumIndex() int {
+	return int(u)
+}
 
 type User struct {
 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
@@ -25,7 +29,7 @@ type User struct {
 	Birthday  time.Time `json:"birthday" gorm:"not null"`
 	Gender    bool      `json:"gender" gorm:"default:false"`
 	Role      bool      `json:"role" gorm:"default:false"`
-	OAuth     UserOAuth `json:"oauth" gorm:"default:0"`
+	OAuth     UserOAuth `json:"oauth" gorm:"column:oauth;default:0"`
 	Active    bool      `json:"active" gorm:"default:true"`
 	IsPrivate bool      `json:"is_private" gorm:"default:false"`
 
