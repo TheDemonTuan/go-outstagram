@@ -95,7 +95,7 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 func (s *AuthService) GenerateAccessToken(userId string) (string, error) {
 	claims := jwt.MapClaims{
 		"uuid": userId,
-		"exp":  time.Now().Add(time.Minute * 30).Unix(),
+		"exp":  time.Now().Add(time.Minute * 5).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
