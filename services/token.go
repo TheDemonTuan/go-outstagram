@@ -63,8 +63,8 @@ func (s *TokenService) DeleteRefreshTokenByUserID(userID string) error {
 	return nil
 }
 
-func (s *TokenService) DeleteRefreshTokenByToken(refreshToken string) error {
-	if err := common.DBConn.Where("refresh_token = ?", refreshToken).Delete(&entity.Token{}).Error; err != nil {
+func (s *TokenService) DeleteRefreshTokenByToken(userID, refreshToken string) error {
+	if err := common.DBConn.Where("refresh_token = ? AND user_id = ?", refreshToken, userID).Delete(&entity.Token{}).Error; err != nil {
 		return errors.New("error while deleting refresh token")
 	}
 

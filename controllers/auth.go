@@ -99,7 +99,7 @@ func (c *AuthController) AuthRefreshToken(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	userId, err := c.authService.ValidateRefreshToken(bodyData.RefreshToken)
+	userId, err := c.authService.ValidateRefreshToken(bodyData.RefreshToken, true)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -126,7 +126,12 @@ func (c *AuthController) AuthLogout(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	if err := c.tokenService.DeleteRefreshTokenByToken(bodyData.RefreshToken); err != nil {
+	userID, err := c.authService.ValidateRefreshToken(bodyData.RefreshToken, true)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := c.tokenService.DeleteRefreshTokenByToken(userID, bodyData.RefreshToken); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 

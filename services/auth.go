@@ -119,7 +119,7 @@ func (s *AuthService) GenerateRefreshToken(userId string) (string, error) {
 	return tokenSigned, nil
 }
 
-func (s *AuthService) ValidateRefreshToken(refreshToken string) (string, error) {
+func (s *AuthService) ValidateRefreshToken(refreshToken string, isCheckDB bool) (string, error) {
 	claims := jwt.MapClaims{}
 	token, tokenErr := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("REFRESH_TOKEN_SECRET")), nil
@@ -138,8 +138,10 @@ func (s *AuthService) ValidateRefreshToken(refreshToken string) (string, error) 
 		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
 	}
 
-	if _, err := s.tokenService.GetRefreshTokenByToken(refreshToken); err != nil {
-		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+	if isCheckDB {
+		if _, err := s.tokenService.GetRefreshTokenByToken(refreshToken); err != nil {
+			return "", fiber.NewError(fiber.StatusBadRequest, "Invalid refresh token")
+		}
 	}
 
 	return userId, nil
