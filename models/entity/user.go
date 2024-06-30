@@ -11,6 +11,8 @@ type UserOAuth int
 const (
 	OAuthDefault UserOAuth = iota
 	OAuthFacebook
+	OAuthGoogle
+	OAuthGithub
 )
 
 func (u UserOAuth) EnumIndex() int {
