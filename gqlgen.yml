@@ -101,6 +101,8 @@ models:
         resolver: true
       posts:
         resolver: true
+      reels:
+        resolver: true
   Friend:
     fields:
       from_user_info:

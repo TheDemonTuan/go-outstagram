@@ -48,7 +48,7 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	caption, privacy, files, err := p.postService.PostCreateValidateRequest(form)
+	caption, privacy, files, postType, err := p.postService.PostCreateValidateRequest(form)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -66,7 +66,7 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	newPost, err := p.postService.PostCreateByUserID(userID, caption, entity.PostPrivacy(privacyInt), localPaths, cloudinaryPaths)
+	newPost, err := p.postService.PostCreateByUserID(userID, caption, entity.PostPrivacy(privacyInt), postType, localPaths, cloudinaryPaths)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}

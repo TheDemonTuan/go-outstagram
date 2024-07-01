@@ -9,6 +9,7 @@ type Post struct {
 	IsHideLike    bool               `json:"is_hide_like"`
 	IsHideComment bool               `json:"is_hide_comment"`
 	Privacy       entity.PostPrivacy `json:"privacy"`
+	Type          entity.PostType    `json:"type"`
 	Active        bool               `json:"active"`
 
 	User         *User          `json:"user"`

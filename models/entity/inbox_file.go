@@ -8,7 +8,7 @@ import (
 type InboxFileType int
 
 const (
-	InboxFileVideo PostFileType = iota
+	InboxFileVideo InboxFileType = iota
 	InboxFileImage
 )
 

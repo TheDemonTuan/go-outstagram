@@ -14,6 +14,17 @@ const (
 	PostPrivate
 )
 
+func (u UserOAuth) PostPrivacyIndex() int {
+	return int(u)
+}
+
+type PostType int
+
+const (
+	PostNormal PostType = iota
+	PostReel
+)
+
 type Post struct {
 	ID            string      `json:"id" gorm:"primaryKey;not null;size:20"`
 	UserID        uuid.UUID   `json:"user_id" gorm:"not null;type:uuid;index"`
@@ -21,6 +32,7 @@ type Post struct {
 	IsHideLike    bool        `json:"is_hide_like" gorm:"default:false"`
 	IsHideComment bool        `json:"is_hide_comment" gorm:"default:false"`
 	Privacy       PostPrivacy `json:"privacy" gorm:"default:0"`
+	Type          PostType    `json:"type" gorm:"default:0"`
 	Active        bool        `json:"active" gorm:"default:true"`
 
 	PostFiles    []PostFile    `json:"post_files" gorm:"foreignKey:PostID;references:ID"`

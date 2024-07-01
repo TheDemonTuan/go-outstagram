@@ -87,7 +87,45 @@ func (p *PostService) PostProfileGetAllByUserName(isOK bool, currentUserID, user
 		}
 	}
 
-	if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ?", user.ID.String(), []entity.PostPrivacy{entity.PostPublic}).Order("created_at desc").Find(posts).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ? AND type = ?", user.ID.String(), []entity.PostPrivacy{entity.PostPublic}, entity.PostNormal).Order("created_at desc").Find(posts).Error; err != nil {
+		return errors.New("error while querying post")
+	}
+
+	return nil
+}
+
+func (p *PostService) PostProfileGetReelsByUserName(isOK bool, currentUserID, username string, posts interface{}) error {
+	var user entity.User
+	if err := common.DBConn.Where("username = ?", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return errors.New("error while querying user")
+	}
+
+	if isOK {
+		if currentUserID == user.ID.String() {
+			if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ?", user.ID).Order("created_at desc").Find(posts).Error; err != nil {
+				return errors.New("error while querying post")
+			}
+			return nil
+		}
+
+		isFriend := true
+		var friendRecord entity.Friend
+		if err := p.friendService.GetFriendByUserID(&friendRecord, currentUserID, user.ID.String()); err != nil {
+			isFriend = false
+		}
+
+		if isFriend {
+			if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ?", user.ID.String(), []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Find(posts).Error; err != nil {
+				return errors.New("error while querying posts")
+			}
+			return nil
+		}
+	}
+
+	if err := common.DBConn.Model(&entity.Post{}).Where("user_id = ? AND privacy IN ? AND type = ?", user.ID.String(), []entity.PostPrivacy{entity.PostPublic}, entity.PostReel).Order("created_at desc").Find(posts).Error; err != nil {
 		return errors.New("error while querying post")
 	}
 
@@ -175,17 +213,17 @@ func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	return nil
 }
 
-func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, string, []*multipart.FileHeader, error) {
+func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, string, []*multipart.FileHeader, entity.PostType, error) {
 	if body == nil {
-		return "", "", nil, errors.New("request body is required")
+		return "", "", nil, entity.PostNormal, errors.New("request body is required")
 	}
 
 	if body.Value == nil {
-		return "", "", nil, errors.New("request body value is required")
+		return "", "", nil, entity.PostNormal, errors.New("request body value is required")
 	}
 
 	if body.File == nil {
-		return "", "", nil, errors.New("request body file is required")
+		return "", "", nil, entity.PostNormal, errors.New("request body file is required")
 	}
 
 	caption := body.Value["caption"]
@@ -193,46 +231,77 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, s
 	files := body.File["files"]
 
 	if len(caption) == 0 || len(caption[0]) == 0 {
-		return "", "", nil, errors.New("caption is required")
+		return "", "", nil, entity.PostNormal, errors.New("caption is required")
 	}
 
 	if len(caption[0]) > 2200 {
-		return "", "", nil, errors.New("caption is too long")
+		return "", "", nil, entity.PostNormal, errors.New("caption is too long")
 	}
 
 	if len(privacy) == 0 || len(privacy[0]) == 0 {
-		return "", "", nil, errors.New("privacy is required")
+		return "", "", nil, entity.PostNormal, errors.New("privacy is required")
 
 	}
 
 	if privacy[0] != "0" && privacy[0] != "1" && privacy[0] != "2" {
-		return "", "", nil, errors.New("privacy is invalid")
+		return "", "", nil, entity.PostNormal, errors.New("privacy is invalid")
 
 	}
 
 	if len(files) == 0 {
-		return "", "", nil, errors.New("files are required")
+		return "", "", nil, entity.PostNormal, errors.New("files are required")
 	}
 
 	if len(files) > 10 {
-		return "", "", nil, errors.New("files are too many")
+		return "", "", nil, entity.PostNormal, errors.New("files are too many")
 	}
 
-	acceptType := map[string]bool{
+	validImageContentTypes := map[string]bool{
 		"image/jpeg": true,
 		"image/png":  true,
 		"image/jpg":  true,
 		"image/webp": true,
-		"video/mp4":  true,
 	}
 
+	validVideoContentTypes := map[string]bool{
+		"video/mp4": true,
+	}
+
+	totalImage := 0
+	totalVideo := 0
+
 	for _, file := range files {
-		if !acceptType[file.Header["Content-Type"][0]] {
-			return "", "", nil, errors.New(file.Filename + "file type is not supported")
+		if validImageContentTypes[file.Header["Content-Type"][0]] {
+			totalImage++
+		}
+
+		if validVideoContentTypes[file.Header["Content-Type"][0]] {
+			totalVideo++
+		}
+
+		if !validImageContentTypes[file.Header["Content-Type"][0]] && !validVideoContentTypes[file.Header["Content-Type"][0]] {
+			return "", "", nil, entity.PostNormal, errors.New("file content type is invalid")
+		}
+
+		if totalImage > 0 && totalVideo > 0 {
+			return "", "", nil, entity.PostNormal, errors.New("files must be all images or all videos")
 		}
 	}
 
-	return caption[0], privacy[0], files, nil
+	if totalImage == 0 && totalVideo == 0 {
+		return "", "", nil, entity.PostNormal, errors.New("files must be all images or all videos")
+	}
+
+	var postType entity.PostType
+	if totalImage > 0 {
+		postType = entity.PostNormal
+	}
+
+	if totalVideo > 0 {
+		postType = entity.PostReel
+	}
+
+	return caption[0], privacy[0], files, postType, nil
 }
 
 func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.FileHeader) ([]string, []*uploader.UploadResult, error) {
@@ -309,28 +378,21 @@ func (p *PostService) PostCreateDeleteFiles(localPaths []string, cloudinaryPaths
 	return nil
 }
 
-func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, privacy entity.PostPrivacy, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, privacy entity.PostPrivacy, postType entity.PostType, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
 	newPostID := "TD" + common.RandomNString(18)
 	newPost := entity.Post{
 		ID:      newPostID,
 		UserID:  userID,
 		Caption: strings.Trim(caption, " "),
 		Privacy: privacy,
+		Type:    postType,
 	}
 
 	for _, filePath := range cloudinaryPaths {
-		var fileType entity.PostFileType
-		if filePath.ResourceType == "video" {
-			fileType = entity.PostFileVideo
-		} else {
-			fileType = entity.PostFileImage
-		}
-
 		newPost.PostFiles = append(newPost.PostFiles, entity.PostFile{
 			ID:     filePath.PublicID,
 			PostID: newPostID,
 			URL:    filePath.SecureURL,
-			Type:   fileType,
 		})
 	}
 
@@ -488,7 +550,34 @@ func (p *PostService) PostGetHomePage(page int, currentUserID string, posts inte
 	postsPerPage := 2
 	offset := (page - 1) * postsPerPage
 
-	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ? AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostNormal).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
+		return errors.New("error while querying posts")
+	}
+
+	return nil
+}
+
+func (p *PostService) PostGetReelHomePage(page int, currentUserID string, posts interface{}) error {
+	var friendRecords []entity.Friend
+	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", currentUserID, currentUserID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
+		return errors.New("error while querying followings")
+	}
+
+	var friends []string
+	for _, f := range friendRecords {
+		if f.FromUserID.String() == currentUserID {
+			friends = append(friends, f.ToUserID.String())
+		} else {
+			friends = append(friends, f.FromUserID.String())
+		}
+	}
+
+	friends = append(friends, currentUserID)
+
+	postsPerPage := 2
+	offset := (page - 1) * postsPerPage
+
+	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ? AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostReel).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
 		return errors.New("error while querying posts")
 	}
 

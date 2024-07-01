@@ -7,9 +7,10 @@ package graph
 import (
 	"context"
 	"fmt"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"outstagram/common"
 	"outstagram/graph/model"
+
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // FromUserInfo is the resolver for the from_user_info field.
@@ -77,6 +78,12 @@ func (r *inboxResolver) ToUserInfo(ctx context.Context, obj *model.Inbox) (*mode
 func (r *postResolver) Privacy(ctx context.Context, obj *model.Post) (*int, error) {
 	var privacy = int(obj.Privacy)
 	return &privacy, nil
+}
+
+// Type is the resolver for the type field.
+func (r *postResolver) Type(ctx context.Context, obj *model.Post) (*int, error) {
+	var postType = int(obj.Type)
+	return &postType, nil
 }
 
 // User is the resolver for the user field.
@@ -229,7 +236,7 @@ func (r *queryResolver) PostByPostID(ctx context.Context, postID string) (*model
 }
 
 // PostSuggestions is the resolver for the postSuggestions field.
-func (r *queryResolver) PostSuggestions(ctx context.Context, userID string, skipPostID string, limit int) ([]*model.Post, error) {
+func (r *queryResolver) PostSuggestions(ctx context.Context, skipPostID string, limit int) ([]*model.Post, error) {
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 
 	var posts []*model.Post
@@ -249,6 +256,21 @@ func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Po
 
 	var posts []*model.Post
 	if err := r.postService.PostGetHomePage(page, currentUserID, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
+// PostReel is the resolver for the postReel field.
+func (r *queryResolver) PostReel(ctx context.Context, page int) ([]*model.Post, error) {
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
+	if !isOk {
+		return nil, gqlerror.Errorf("user not found")
+	}
+
+	var posts []*model.Post
+	if err := r.postService.PostGetReelHomePage(page, currentUserID, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -311,6 +333,18 @@ func (r *userProfileResolver) Posts(ctx context.Context, obj *model.UserProfile)
 
 	var posts []*model.Post
 	if err := r.postService.PostProfileGetAllByUserName(isOk, currentUserID, obj.Username, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
+// Reels is the resolver for the reels field.
+func (r *userProfileResolver) Reels(ctx context.Context, obj *model.UserProfile) ([]*model.Post, error) {
+	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
+
+	var posts []*model.Post
+	if err := r.postService.PostProfileGetReelsByUserName(isOk, currentUserID, obj.Username, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 

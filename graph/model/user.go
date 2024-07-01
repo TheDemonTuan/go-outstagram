@@ -23,6 +23,7 @@ type UserProfile struct {
 	Username string  `json:"username"`
 	User     *User   `json:"user"`
 	Posts    []*Post `json:"posts"`
+	Reels    []*Post `json:"reels"`
 }
 
 type UserSuggestion struct {

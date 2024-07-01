@@ -51,6 +51,7 @@ type Post {
     is_hide_like: Boolean
     is_hide_comment: Boolean
     privacy: Int
+    type: Int
     active: Boolean
 
     user: User
@@ -67,7 +68,6 @@ type PostFile {
     id: ID!
     post_id: ID!
     url: String
-    type: String
     active: Boolean
     created_at: String
     updated_at: String
@@ -107,6 +107,7 @@ type UserProfile {
     username: String!
     user: User
     posts: [Post]
+    reels: [Post]
 }
 
 type Friend {
@@ -172,6 +173,7 @@ type Query {
     postByPostId(postID: String!): Post!
     postSuggestions(skipPostID: String!, limit: Int!): [Post!]!
     postHomePage(page: Int!): [Post!]!
+    postReel(page: Int!): [Post!]!
     # inbox
     inboxGetByUsername(username: String!): [Inbox!]!
     inboxGetAllBubble: [InboxGetAllBubble!]!

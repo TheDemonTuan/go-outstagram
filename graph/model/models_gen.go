@@ -26,7 +26,6 @@ type PostFile struct {
 	ID        string  `json:"id"`
 	PostID    string  `json:"post_id"`
 	URL       *string `json:"url,omitempty"`
-	Type      *string `json:"type,omitempty"`
 	Active    *bool   `json:"active,omitempty"`
 	CreatedAt *string `json:"created_at,omitempty"`
 	UpdatedAt *string `json:"updated_at,omitempty"`
