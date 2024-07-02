@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"outstagram/common"
 	"outstagram/graph/model"
+	"outstagram/models/entity"
 
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -255,7 +256,7 @@ func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Po
 	}
 
 	var posts []*model.Post
-	if err := r.postService.PostGetHomePage(page, currentUserID, &posts); err != nil {
+	if err := r.postService.PostGetHomePage(page, currentUserID, entity.PostNormal, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -270,7 +271,7 @@ func (r *queryResolver) PostReel(ctx context.Context, page int) ([]*model.Post, 
 	}
 
 	var posts []*model.Post
-	if err := r.postService.PostGetReelHomePage(page, currentUserID, &posts); err != nil {
+	if err := r.postService.PostGetHomePage(page, currentUserID, entity.PostReel, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -332,7 +333,7 @@ func (r *userProfileResolver) Posts(ctx context.Context, obj *model.UserProfile)
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 
 	var posts []*model.Post
-	if err := r.postService.PostProfileGetAllByUserName(isOk, currentUserID, obj.Username, &posts); err != nil {
+	if err := r.postService.PostProfileGetAllByUserName(isOk, currentUserID, obj.Username, entity.PostNormal, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
@@ -344,7 +345,7 @@ func (r *userProfileResolver) Reels(ctx context.Context, obj *model.UserProfile)
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 
 	var posts []*model.Post
-	if err := r.postService.PostProfileGetReelsByUserName(isOk, currentUserID, obj.Username, &posts); err != nil {
+	if err := r.postService.PostProfileGetAllByUserName(isOk, currentUserID, obj.Username, entity.PostReel, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
