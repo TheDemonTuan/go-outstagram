@@ -158,6 +158,7 @@ type ComplexityRoot struct {
 		InboxGetByUsername func(childComplexity int, username string) int
 		PostByPostID       func(childComplexity int, postID string) int
 		PostByUsername     func(childComplexity int, username string) int
+		PostExplores       func(childComplexity int, page int) int
 		PostHomePage       func(childComplexity int, page int) int
 		PostReel           func(childComplexity int, page int) int
 		PostSuggestions    func(childComplexity int, skipPostID string, limit int) int
@@ -249,6 +250,7 @@ type QueryResolver interface {
 	PostSuggestions(ctx context.Context, skipPostID string, limit int) ([]*model.Post, error)
 	PostHomePage(ctx context.Context, page int) ([]*model.Post, error)
 	PostReel(ctx context.Context, page int) ([]*model.Post, error)
+	PostExplores(ctx context.Context, page int) ([]*model.Post, error)
 	InboxGetByUsername(ctx context.Context, username string) ([]*model.Inbox, error)
 	InboxGetAllBubble(ctx context.Context) ([]*model.InboxGetAllBubble, error)
 }
@@ -852,6 +854,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.PostByUsername(childComplexity, args["username"].(string)), true
 
+	case "Query.postExplores":
+		if e.complexity.Query.PostExplores == nil {
+			break
+		}
+
+		args, err := ec.field_Query_postExplores_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PostExplores(childComplexity, args["page"].(int)), true
+
 	case "Query.postHomePage":
 		if e.complexity.Query.PostHomePage == nil {
 			break
@@ -1339,6 +1353,21 @@ func (ec *executionContext) field_Query_postByUsername_args(ctx context.Context,
 		}
 	}
 	args["username"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_postExplores_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg0
 	return args, nil
 }
 
@@ -5704,6 +5733,93 @@ func (ec *executionContext) fieldContext_Query_postReel(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_postReel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_postExplores(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_postExplores(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PostExplores(rctx, fc.Args["page"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Post)
+	fc.Result = res
+	return ec.marshalNPost2ᚕᚖoutstagramᚋgraphᚋmodelᚐPostᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_postExplores(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Post_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_Post_user_id(ctx, field)
+			case "caption":
+				return ec.fieldContext_Post_caption(ctx, field)
+			case "is_hide_like":
+				return ec.fieldContext_Post_is_hide_like(ctx, field)
+			case "is_hide_comment":
+				return ec.fieldContext_Post_is_hide_comment(ctx, field)
+			case "privacy":
+				return ec.fieldContext_Post_privacy(ctx, field)
+			case "type":
+				return ec.fieldContext_Post_type(ctx, field)
+			case "active":
+				return ec.fieldContext_Post_active(ctx, field)
+			case "user":
+				return ec.fieldContext_Post_user(ctx, field)
+			case "post_files":
+				return ec.fieldContext_Post_post_files(ctx, field)
+			case "post_likes":
+				return ec.fieldContext_Post_post_likes(ctx, field)
+			case "post_comments":
+				return ec.fieldContext_Post_post_comments(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Post_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Post_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Post_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Post", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_postExplores_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -10475,6 +10591,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_postReel(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "postExplores":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_postExplores(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

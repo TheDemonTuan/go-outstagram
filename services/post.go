@@ -518,3 +518,11 @@ func (p *PostService) PostGetHomePage(page int, currentUserID string, postType e
 
 	return nil
 }
+
+func (p *PostService) PostGetExplores(page int, posts interface{}) error {
+	if err := common.DBConn.Model(&entity.Post{}).Where("privacy IN ?", []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}).Order("created_at desc").Find(posts).Error; err != nil {
+		return errors.New("error while querying posts")
+	}
+
+	return nil
+}

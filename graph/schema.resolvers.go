@@ -180,6 +180,7 @@ func (r *queryResolver) UserProfile(ctx context.Context, username string) (*mode
 	var userProfile = &model.UserProfile{
 		Username: username,
 		Posts:    []*model.Post{},
+		Reels:    []*model.Post{},
 	}
 
 	return userProfile, nil
@@ -278,6 +279,16 @@ func (r *queryResolver) PostReel(ctx context.Context, page int) ([]*model.Post, 
 
 	var posts []*model.Post
 	if err := r.postService.PostGetHomePage(page, currentUserID, entity.PostReel, &posts); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return posts, nil
+}
+
+// PostExplores is the resolver for the postExplores field.
+func (r *queryResolver) PostExplores(ctx context.Context, page int) ([]*model.Post, error) {
+	var posts []*model.Post
+	if err := r.postService.PostGetExplores(page, &posts); err != nil {
 		return nil, gqlerror.Errorf(err.Error())
 	}
 
