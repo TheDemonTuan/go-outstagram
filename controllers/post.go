@@ -81,7 +81,7 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
 	}
 
-	postLike, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID)
+	postLike, postUserID, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID)
 	if err != nil {
 		return err
 	}
@@ -91,15 +91,15 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 	}
 
 	// Push notification
-	if currentUserInfo.ID != postLike.UserID {
+	if currentUserInfo.ID.String() != postUserID {
 		data := map[string]string{}
 		data["type"] = "post-like"
-		data["message"] = currentUserInfo.Username + " liked your post!"
+		data["message"] = "liked your post!"
 		data["username"] = currentUserInfo.Username
 		data["avatar"] = currentUserInfo.Avatar
 		data["createdAt"] = time.Now().Format(time.RFC3339)
 
-		if err := common.PusherClient.Trigger(postLike.UserID.String(), "internal-socket", data); err != nil {
+		if err := common.PusherClient.Trigger(postUserID, "internal-socket", data); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
@@ -139,8 +139,10 @@ func (p *PostController) PostMeDeleteByPostID(ctx *fiber.Ctx) error {
 
 func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
-	userID := uuid.MustParse(rawUserID)
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
 
 	parentID := ctx.Query("parentID")
 
@@ -155,9 +157,23 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Comment content is empty")
 	}
 
-	postComment, err := p.postService.PostCommentByPostID(postID, userID, content, parentID)
+	postComment, postUserID, err := p.postService.PostCommentByPostID(postID, currentUserInfo.ID, content, parentID)
 	if err != nil {
 		return err
+	}
+
+	// Push notification
+	if currentUserInfo.ID.String() != postUserID {
+		data := map[string]string{}
+		data["type"] = "post-comment"
+		data["message"] = "commented: " + content
+		data["username"] = currentUserInfo.Username
+		data["avatar"] = currentUserInfo.Avatar
+		data["createdAt"] = time.Now().Format(time.RFC3339)
+
+		if err := common.PusherClient.Trigger(postUserID, "internal-socket", data); err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		}
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Comment created", postComment)

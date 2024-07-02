@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"outstagram/common"
 	"outstagram/graph/model"
 	"outstagram/models/entity"
@@ -252,7 +253,12 @@ func (r *queryResolver) PostSuggestions(ctx context.Context, skipPostID string, 
 func (r *queryResolver) PostHomePage(ctx context.Context, page int) ([]*model.Post, error) {
 	currentUserID, isOk := ctx.Value(common.UserIDLocalKey).(string)
 	if !isOk {
-		return nil, gqlerror.Errorf("user not found")
+		return nil, &gqlerror.Error{
+			Message: "User not found",
+			Extensions: map[string]interface{}{
+				"code": http.StatusUnauthorized,
+			},
+		}
 	}
 
 	var posts []*model.Post

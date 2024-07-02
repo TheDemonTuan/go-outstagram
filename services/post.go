@@ -368,21 +368,21 @@ func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, priva
 	return newPost, nil
 }
 
-func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.PostLike, error) {
+func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.PostLike, string, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entity.PostLike{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+			return entity.PostLike{}, "", fiber.NewError(fiber.StatusBadRequest, "Post not found")
 		}
-		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
 	}
 
 	var userRecord entity.User
 	if err := common.DBConn.Where("id = ?", userID).First(&userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entity.PostLike{}, fiber.NewError(fiber.StatusBadRequest, "User not found")
+			return entity.PostLike{}, "", fiber.NewError(fiber.StatusBadRequest, "User not found")
 		}
-		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
 	var postLike entity.PostLike
@@ -394,12 +394,12 @@ func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.
 			}
 
 			if err := common.DBConn.Create(&postLike).Error; err != nil {
-				return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating post like")
+				return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while creating post like")
 			}
 
-			return postLike, nil
+			return postLike, "", nil
 		}
-		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
+		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
 	}
 
 	if postLike.IsLiked {
@@ -409,10 +409,10 @@ func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.
 	}
 
 	if err := common.DBConn.Save(&postLike).Error; err != nil {
-		return entity.PostLike{}, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post like")
+		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while updating post like")
 	}
 
-	return postLike, nil
+	return postLike, postRecord.UserID.String(), nil
 }
 
 func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption string, privacy entity.PostPrivacy) (entity.Post, error) {
@@ -453,13 +453,13 @@ func (p *PostService) PostDeleteByPostID(postID string, userID uuid.UUID) error 
 	return nil
 }
 
-func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string, parentID string) (entity.PostComment, error) {
+func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string, parentID string) (entity.PostComment, string, error) {
 	var postRecord entity.Post
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+			return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Post not found")
 		}
-		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+		return entity.PostComment{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
 	}
 
 	newPostComment := entity.PostComment{
@@ -471,25 +471,25 @@ func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, conte
 	if parentID != "" {
 		parentIDUUID, err := uuid.Parse(parentID)
 		if err != nil {
-			return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Parent comment ID is invalid")
+			return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Parent comment ID is invalid")
 		}
 
 		var postCommentRecord entity.PostComment
 		if err := common.DBConn.Where("id = ?", parentID).First(&postCommentRecord).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return entity.PostComment{}, fiber.NewError(fiber.StatusBadRequest, "Parent comment not found")
+				return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Parent comment not found")
 			}
-			return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying parent comment")
+			return entity.PostComment{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying parent comment")
 		}
 
 		newPostComment.ParentID = parentIDUUID
 	}
 
 	if err := common.DBConn.Create(&newPostComment).Error; err != nil {
-		return entity.PostComment{}, fiber.NewError(fiber.StatusInternalServerError, "Error while creating post comment")
+		return entity.PostComment{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while creating post comment")
 	}
 
-	return newPostComment, nil
+	return newPostComment, postRecord.UserID.String(), nil
 }
 
 func (p *PostService) PostGetHomePage(page int, currentUserID string, postType entity.PostType, posts interface{}) error {
