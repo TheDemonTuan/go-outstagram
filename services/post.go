@@ -550,7 +550,7 @@ func (p *PostService) PostGetHomePage(page int, currentUserID string, posts inte
 	postsPerPage := 2
 	offset := (page - 1) * postsPerPage
 
-	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ? AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostNormal).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("((user_id IN ? AND privacy IN ?) OR user_id = ?) AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostNormal).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
 		return errors.New("error while querying posts")
 	}
 
@@ -577,7 +577,7 @@ func (p *PostService) PostGetReelHomePage(page int, currentUserID string, posts 
 	postsPerPage := 2
 	offset := (page - 1) * postsPerPage
 
-	if err := common.DBConn.Model(&entity.Post{}).Where("(user_id IN ? AND privacy IN ?) OR user_id = ? AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostReel).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Where("((user_id IN ? AND privacy IN ?) OR user_id = ?) AND type = ?", friends, []entity.PostPrivacy{entity.PostOnlyFriend, entity.PostPublic}, currentUserID, entity.PostReel).Order("created_at desc").Offset(offset).Limit(postsPerPage).Find(posts).Error; err != nil {
 		return errors.New("error while querying posts")
 	}
 
