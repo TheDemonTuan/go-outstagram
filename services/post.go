@@ -397,7 +397,7 @@ func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.
 				return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while creating post like")
 			}
 
-			return postLike, "", nil
+			return postLike, postRecord.UserID.String(), nil
 		}
 		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
 	}
