@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"log"
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
@@ -81,7 +82,8 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
 	}
 
-	postLike, postUserID, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID)
+	var postRecord entity.Post
+	postLike, postUserID, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID, &postRecord)
 	if err != nil {
 		return err
 	}
@@ -90,13 +92,19 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 		return common.CreateResponse(ctx, fiber.StatusOK, "Post unliked", postLike)
 	}
 
+	log.Println(entity.PostType(postRecord.Type).PostTypeString())
+
 	// Push notification
 	if currentUserInfo.ID.String() != postUserID {
-		data := map[string]string{}
+		data := map[string]interface{}{}
 		data["type"] = "post-like"
 		data["message"] = "liked your post!"
+		data["userID"] = currentUserInfo.ID
 		data["username"] = currentUserInfo.Username
 		data["avatar"] = currentUserInfo.Avatar
+		data["postID"] = postRecord.ID
+		data["postType"] = entity.PostType(postRecord.Type).PostTypeString()
+		data["postLike"] = postLike
 		data["createdAt"] = time.Now().Format(time.RFC3339)
 
 		if err := common.PusherClient.Trigger(postUserID, "internal-socket", data); err != nil {
@@ -157,21 +165,37 @@ func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Comment content is empty")
 	}
 
-	postComment, postUserID, err := p.postService.PostCommentByPostID(postID, currentUserInfo.ID, content, parentID)
+	var postRecord entity.Post
+	var userParentRecord entity.User
+	postComment, postUserID, err := p.postService.PostCommentByPostID(postID, currentUserInfo.ID, content, parentID, &postRecord, &userParentRecord)
 	if err != nil {
 		return err
 	}
 
 	// Push notification
-	if currentUserInfo.ID.String() != postUserID {
-		data := map[string]string{}
-		data["type"] = "post-comment"
-		data["message"] = "commented: " + content
-		data["username"] = currentUserInfo.Username
-		data["avatar"] = currentUserInfo.Avatar
-		data["createdAt"] = time.Now().Format(time.RFC3339)
+	data := map[string]interface{}{}
+	data["type"] = "post-comment"
+	data["message"] = "post commented: " + content
+	data["userID"] = currentUserInfo.ID
+	data["username"] = currentUserInfo.Username
+	data["avatar"] = currentUserInfo.Avatar
+	data["postID"] = postRecord.ID
+	data["postType"] = entity.PostType(postRecord.Type).PostTypeString()
+	data["postComment"] = postComment
+	data["createdAt"] = time.Now().Format(time.RFC3339)
 
+	if currentUserInfo.ID.String() != postUserID && userParentRecord.ID.String() != postUserID {
 		if err := common.PusherClient.Trigger(postUserID, "internal-socket", data); err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		}
+	}
+
+	if userParentRecord.ID.String() != "" && userParentRecord.ID.String() != currentUserInfo.ID.String() {
+		data["message"] = "post replied: " + content
+		data["parentID"] = userParentRecord.ID
+		data["parentUsername"] = userParentRecord.Username
+
+		if err := common.PusherClient.Trigger(userParentRecord.ID.String(), "internal-socket", data); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}

@@ -14,8 +14,8 @@ const (
 	PostPrivate
 )
 
-func (u UserOAuth) PostPrivacyIndex() int {
-	return int(u)
+func (p PostPrivacy) PostPrivacyIndex() int {
+	return int(p)
 }
 
 type PostType int
@@ -24,6 +24,14 @@ const (
 	PostNormal PostType = iota
 	PostReel
 )
+
+func (p PostType) PostTypeIndex() int {
+	return int(p)
+}
+
+func (p PostType) PostTypeString() string {
+	return []string{"Normal", "Reel"}[p.PostTypeIndex()]
+}
 
 type Post struct {
 	ID            string      `json:"id" gorm:"primaryKey;not null;size:20"`

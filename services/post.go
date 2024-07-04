@@ -368,8 +368,7 @@ func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, priva
 	return newPost, nil
 }
 
-func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID) (entity.PostLike, string, error) {
-	var postRecord entity.Post
+func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID, postRecord *entity.Post) (entity.PostLike, string, error) {
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return entity.PostLike{}, "", fiber.NewError(fiber.StatusBadRequest, "Post not found")
@@ -453,8 +452,7 @@ func (p *PostService) PostDeleteByPostID(postID string, userID uuid.UUID) error 
 	return nil
 }
 
-func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string, parentID string) (entity.PostComment, string, error) {
-	var postRecord entity.Post
+func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, content string, parentID string, postRecord *entity.Post, userParentRecord *entity.User) (entity.PostComment, string, error) {
 	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Post not found")
@@ -480,6 +478,13 @@ func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, conte
 				return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Parent comment not found")
 			}
 			return entity.PostComment{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying parent comment")
+		}
+
+		if err := common.DBConn.Select("id", "username").Where("id = ?", postCommentRecord.UserID).First(&userParentRecord).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return entity.PostComment{}, "", fiber.NewError(fiber.StatusBadRequest, "Parent comment user not found")
+			}
+			return entity.PostComment{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying parent comment user")
 		}
 
 		newPostComment.ParentID = parentIDUUID
