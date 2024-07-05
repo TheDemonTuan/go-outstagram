@@ -215,3 +215,21 @@ func (f *FriendService) GetAllFriendsByUserName(userName string, friends interfa
 
 	return nil
 }
+
+func (f *FriendService) GetListFriendID(userID string) ([]string, error) {
+	var friendRecords []entity.Friend
+	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", userID, userID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
+		return nil, err
+	}
+
+	var friends []string
+	for _, f := range friendRecords {
+		if f.FromUserID.String() == userID {
+			friends = append(friends, f.ToUserID.String())
+		} else {
+			friends = append(friends, f.FromUserID.String())
+		}
+	}
+
+	return friends, nil
+}

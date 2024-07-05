@@ -17,10 +17,14 @@ import (
 	"time"
 )
 
-type UserService struct{}
+type UserService struct {
+	friendService *FriendService
+}
 
 func NewUserService() *UserService {
-	return &UserService{}
+	return &UserService{
+		friendService: NewFriendService(),
+	}
 }
 
 func (u *UserService) UserGetByID(userID string, userRecord interface{}) error {
@@ -257,7 +261,12 @@ func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.
 }
 
 func (u *UserService) UserSuggestion(userID string, count int, users interface{}) error {
-	if err := common.DBConn.Model(&entity.User{}).Where("id != ?", userID).Order("RANDOM()").Limit(count).Find(users).Error; err != nil {
+	friends, err := u.friendService.GetListFriendID(userID)
+	if err != nil {
+		return err
+	}
+
+	if err := common.DBConn.Model(&entity.User{}).Not("id = ?", userID).Where("id NOT IN ?", friends).Order("RANDOM()").Limit(count).Find(users).Error; err != nil {
 		return errors.New("error while querying user")
 	}
 	return nil

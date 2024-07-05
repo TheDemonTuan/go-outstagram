@@ -498,21 +498,10 @@ func (p *PostService) PostCommentByPostID(postID string, userID uuid.UUID, conte
 }
 
 func (p *PostService) PostGetHomePage(page int, currentUserID string, postType entity.PostType, posts interface{}) error {
-	var friendRecords []entity.Friend
-	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", currentUserID, currentUserID, entity.FriendAccepted).Select("from_user_id", "to_user_id").Find(&friendRecords).Error; err != nil {
-		return errors.New("error while querying followings")
+	friends, err := p.friendService.GetListFriendID(currentUserID)
+	if err != nil {
+		return err
 	}
-
-	var friends []string
-	for _, f := range friendRecords {
-		if f.FromUserID.String() == currentUserID {
-			friends = append(friends, f.ToUserID.String())
-		} else {
-			friends = append(friends, f.FromUserID.String())
-		}
-	}
-
-	friends = append(friends, currentUserID)
 
 	postsPerPage := 2
 	offset := (page - 1) * postsPerPage
