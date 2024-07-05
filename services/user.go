@@ -14,6 +14,7 @@ import (
 	"outstagram/models/req"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type UserService struct{}
@@ -210,12 +211,21 @@ func (u *UserService) UserMeEditProfileValidateRequest(userRecord *req.UserMeUpd
 	return nil
 }
 
+func (u *UserService) IsUserAtLeast13(birthday time.Time) bool {
+	thirteenYearsAgo := time.Now().AddDate(-13, 0, 0)
+	return birthday.Before(thirteenYearsAgo) || birthday.Equal(thirteenYearsAgo)
+}
+
 func (u *UserService) UserMeEditProfileSaveToDB(ctx *fiber.Ctx, userRecord *req.UserMeUpdate) (entity.User, error) {
 	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 
 	genderConvert := true
 	if userRecord.Gender == "male" {
 		genderConvert = false
+	}
+
+	if !u.IsUserAtLeast13(userRecord.Birthday) {
+		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User must be at least 13 years old")
 	}
 
 	if userInfo.Username == userRecord.Username && userInfo.FullName == userRecord.FullName && userInfo.Birthday.Format("2006-01-02") == userRecord.Birthday.Format("2006-01-02") && userInfo.Bio == userRecord.Bio && userInfo.Gender == genderConvert {
