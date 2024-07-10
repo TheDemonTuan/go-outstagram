@@ -32,7 +32,7 @@ func (ib *InboxController) InboxSendMessage(ctx *fiber.Ctx) error {
 
 	toUserName := ctx.Params("toUserName")
 
-	inboxRecord, err := ib.inboxService.SendMessage(currentUserInfo.ID.String(), toUserName, bodyData.Message)
+	inboxRecord, err := ib.inboxService.SendMessage(currentUserInfo, toUserName, bodyData.Message)
 	if err != nil {
 		return err
 	}

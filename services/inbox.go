@@ -10,6 +10,7 @@ import (
 	"outstagram/graph/model"
 	"outstagram/models/entity"
 	"sync"
+	"time"
 )
 
 type InboxService struct{}
@@ -18,8 +19,8 @@ func NewInboxService() *InboxService {
 	return &InboxService{}
 }
 
-func (ib *InboxService) SendMessage(fromUserID, toUserName, message string) (entity.Inbox, error) {
-	fromUserUUID, err := uuid.Parse(fromUserID)
+func (ib *InboxService) SendMessage(fromUserInfo entity.User, toUserName, message string) (entity.Inbox, error) {
+	fromUserUUID, err := uuid.Parse(fromUserInfo.ID.String())
 	if err != nil {
 		return entity.Inbox{}, fiber.NewError(fiber.StatusBadRequest, "Invalid from user ID")
 	}
@@ -32,7 +33,7 @@ func (ib *InboxService) SendMessage(fromUserID, toUserName, message string) (ent
 		return entity.Inbox{}, fiber.NewError(fiber.StatusInternalServerError, "Error while getting user record")
 	}
 
-	if fromUserID == userRecord.ID.String() {
+	if fromUserInfo.ID.String() == userRecord.ID.String() {
 		return entity.Inbox{}, fiber.NewError(fiber.StatusBadRequest, "You can't send message to yourself")
 	}
 
@@ -42,6 +43,21 @@ func (ib *InboxService) SendMessage(fromUserID, toUserName, message string) (ent
 	inboxRecord.Message = message
 
 	if err := common.DBConn.Save(&inboxRecord).Error; err != nil {
+		return entity.Inbox{}, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	// Push notification
+	data := map[string]string{}
+	data["type"] = "inbox-action"
+	data["action"] = "send"
+	data["message"] = "accepted your friend request!"
+	data["fromUserID"] = fromUserInfo.ID.String()
+	data["username"] = fromUserInfo.Username
+	data["toUserName"] = userRecord.Username
+	//data["avatar"] = currentUserInfo.Avatar
+	data["createdAt"] = time.Now().Format(time.RFC3339)
+
+	if err := common.PusherClient.Trigger(userRecord.ID.String(), "internal-socket", data); err != nil {
 		return entity.Inbox{}, fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
