@@ -175,47 +175,64 @@ func (p *PostService) PostGetAll(posts *[]entity.Post) error {
 	return nil
 }
 
-func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, string, []*multipart.FileHeader, entity.PostType, error) {
+func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, string, []*multipart.FileHeader, entity.PostType, string, string, error) {
 	if body == nil {
-		return "", "", nil, entity.PostNormal, errors.New("request body is required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("request body is required")
 	}
 
 	if body.Value == nil {
-		return "", "", nil, entity.PostNormal, errors.New("request body value is required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("request body value is required")
 	}
 
 	if body.File == nil {
-		return "", "", nil, entity.PostNormal, errors.New("request body file is required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("request body file is required")
 	}
 
 	caption := body.Value["caption"]
 	privacy := body.Value["privacy"]
 	files := body.File["files"]
+	isHideLike := body.Value["is_hide_like"]
+	isHideComment := body.Value["is_hide_comment"]
 
 	if len(caption) == 0 || len(caption[0]) == 0 {
-		return "", "", nil, entity.PostNormal, errors.New("caption is required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("caption is required")
 	}
 
 	if len(caption[0]) > 2200 {
-		return "", "", nil, entity.PostNormal, errors.New("caption is too long")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("caption is too long")
 	}
 
 	if len(privacy) == 0 || len(privacy[0]) == 0 {
-		return "", "", nil, entity.PostNormal, errors.New("privacy is required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("privacy is required")
 
 	}
 
 	if privacy[0] != "0" && privacy[0] != "1" && privacy[0] != "2" {
-		return "", "", nil, entity.PostNormal, errors.New("privacy is invalid")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("privacy is invalid")
+
+	}
+
+	if len(isHideLike) == 0 || len(isHideLike[0]) == 0 {
+		return "", "", nil, entity.PostNormal, "", "", errors.New("is_hide_like is required")
+
+	}
+
+	if isHideLike[0] != "true" && isHideLike[0] != "false" {
+		return "", "", nil, entity.PostNormal, "", "", errors.New("is_hide_like is invalid")
+
+	}
+
+	if len(isHideComment) == 0 || len(isHideComment[0]) == 0 {
+		return "", "", nil, entity.PostNormal, "", "", errors.New("is_hide_comment is required")
 
 	}
 
 	if len(files) == 0 {
-		return "", "", nil, entity.PostNormal, errors.New("files are required")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("files are required")
 	}
 
 	if len(files) > 10 {
-		return "", "", nil, entity.PostNormal, errors.New("files are too many")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("files are too many")
 	}
 
 	validImageContentTypes := map[string]bool{
@@ -242,16 +259,16 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, s
 		}
 
 		if !validImageContentTypes[file.Header["Content-Type"][0]] && !validVideoContentTypes[file.Header["Content-Type"][0]] {
-			return "", "", nil, entity.PostNormal, errors.New("file content type is invalid")
+			return "", "", nil, entity.PostNormal, "", "", errors.New("file content type is invalid")
 		}
 
 		if totalImage > 0 && totalVideo > 0 {
-			return "", "", nil, entity.PostNormal, errors.New("files must be all images or all videos")
+			return "", "", nil, entity.PostNormal, "", "", errors.New("files must be all images or all videos")
 		}
 	}
 
 	if totalImage == 0 && totalVideo == 0 {
-		return "", "", nil, entity.PostNormal, errors.New("files must be all images or all videos")
+		return "", "", nil, entity.PostNormal, "", "", errors.New("files must be all images or all videos")
 	}
 
 	var postType entity.PostType
@@ -263,7 +280,7 @@ func (p *PostService) PostCreateValidateRequest(body *multipart.Form) (string, s
 		postType = entity.PostReel
 	}
 
-	return caption[0], privacy[0], files, postType, nil
+	return caption[0], privacy[0], files, postType, isHideLike[0], isHideComment[0], nil
 }
 
 func (p *PostService) PostCreateUploadFiles(ctx *fiber.Ctx, files []*multipart.FileHeader) ([]string, []*uploader.UploadResult, error) {
@@ -340,14 +357,17 @@ func (p *PostService) PostCreateDeleteFiles(localPaths []string, cloudinaryPaths
 	return nil
 }
 
-func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, privacy entity.PostPrivacy, postType entity.PostType, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+func (p *PostService) PostCreateByUserID(userID uuid.UUID, caption string, privacy entity.PostPrivacy, isHideLike bool, isHideComment bool, postType entity.PostType, localPaths []string, cloudinaryPaths []*uploader.UploadResult) (entity.Post, error) {
+
 	newPostID := "TD" + common.RandomNString(18)
 	newPost := entity.Post{
-		ID:      newPostID,
-		UserID:  userID,
-		Caption: strings.Trim(caption, " "),
-		Privacy: privacy,
-		Type:    postType,
+		ID:            newPostID,
+		UserID:        userID,
+		Caption:       strings.Trim(caption, " "),
+		Privacy:       privacy,
+		IsHideComment: isHideComment,
+		IsHideLike:    isHideLike,
+		Type:          postType,
 	}
 
 	for _, filePath := range cloudinaryPaths {
@@ -434,6 +454,42 @@ func (p *PostService) PostEditByPostID(postID string, userID uuid.UUID, caption 
 	}
 
 	return postRecord, nil
+}
+
+func (p *PostService) PostHiddenCommentByPostID(postID string, userID uuid.UUID) (bool, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+
+	}
+	postRecord.IsHideComment = !postRecord.IsHideComment
+
+	if err := common.DBConn.Save(&postRecord).Error; err != nil {
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post")
+	}
+
+	return postRecord.IsHideComment, nil
+}
+
+func (p *PostService) PostHiddenLikeByPostID(postID string, userID uuid.UUID) (bool, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ? and user_id = ?", postID, userID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+
+	}
+	postRecord.IsHideLike = !postRecord.IsHideLike
+
+	if err := common.DBConn.Save(&postRecord).Error; err != nil {
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while updating post")
+	}
+
+	return postRecord.IsHideLike, nil
 }
 
 func (p *PostService) PostDeleteByPostID(postID string, userID uuid.UUID) error {
