@@ -266,6 +266,10 @@ func (u *UserService) UserSuggestion(userID string, count int, users interface{}
 		return err
 	}
 
+	if len(friends) == 0 {
+		friends = append(friends, userID)
+	}
+
 	if err := common.DBConn.Model(&entity.User{}).Not("id = ?", userID).Where("id NOT IN ?", friends).Order("RANDOM()").Limit(count).Find(users).Error; err != nil {
 		return errors.New("error while querying user")
 	}

@@ -35,14 +35,15 @@ type User struct {
 	Active    bool      `json:"active" gorm:"default:true"`
 	IsPrivate bool      `json:"is_private" gorm:"default:false"`
 
-	Posts        []Post        `json:"posts" gorm:"foreignKey:UserID;references:ID"`
-	PostLikes    []PostLike    `json:"post_likes" gorm:"foreignKey:UserID;references:ID"`
-	PostComments []PostComment `json:"post_comments" gorm:"foreignKey:UserID;references:ID"`
-	FromFriends  []Friend      `json:"from_friends" gorm:"foreignKey:FromUserID;references:ID"`
-	ToFriends    []Friend      `json:"to_friends" gorm:"foreignKey:ToUserID;references:ID"`
-	InboxFrom    []Inbox       `json:"inbox_from" gorm:"foreignKey:FromUserID;references:ID"`
-	InboxTo      []Inbox       `json:"inbox_to" gorm:"foreignKey:ToUserID;references:ID"`
-	Token        []Token       `json:"tokens" gorm:"foreignKey:UserID;references:ID"`
+	Posts        []Post        `json:"-" gorm:"foreignKey:UserID;references:ID"`
+	PostLikes    []PostLike    `json:"-" gorm:"foreignKey:UserID;references:ID"`
+	PostComments []PostComment `json:"-" gorm:"foreignKey:UserID;references:ID"`
+	FromFriends  []Friend      `json:"-" gorm:"foreignKey:FromUserID;references:ID"`
+	ToFriends    []Friend      `json:"-" gorm:"foreignKey:ToUserID;references:ID"`
+	InboxFrom    []Inbox       `json:"-" gorm:"foreignKey:FromUserID;references:ID"`
+	InboxTo      []Inbox       `json:"-" gorm:"foreignKey:ToUserID;references:ID"`
+	Token        []Token       `json:"-" gorm:"foreignKey:UserID;references:ID"`
+	PostSaves    []PostSave    `json:"-" gorm:"foreignKey:UserID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

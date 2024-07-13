@@ -396,14 +396,6 @@ func (p *PostService) PostLikeByPostID(postID string, userID uuid.UUID, postReco
 		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
 	}
 
-	var userRecord entity.User
-	if err := common.DBConn.Where("id = ?", userID).First(&userRecord).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entity.PostLike{}, "", fiber.NewError(fiber.StatusBadRequest, "User not found")
-		}
-		return entity.PostLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
-	}
-
 	var postLike entity.PostLike
 	if err := common.DBConn.Where("post_id = ? AND user_id = ?", postID, userID).First(&postLike).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -574,5 +566,46 @@ func (p *PostService) PostGetExplores(page int, posts interface{}) error {
 		return errors.New("error while querying posts")
 	}
 
+	return nil
+}
+
+func (p *PostService) PostSaveByPostID(postID, userID string) (entity.PostSave, error) {
+	var postRecord entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&postRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.PostSave{}, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return entity.PostSave{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	if postRecord.UserID.String() == userID {
+		return entity.PostSave{}, fiber.NewError(fiber.StatusBadRequest, "You can't save your own post")
+	}
+
+	var postSave entity.PostSave
+	if err := common.DBConn.Where("post_id = ? AND user_id = ?", postID, userID).First(&postSave).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			postSave = entity.PostSave{
+				PostID: postID,
+				UserID: uuid.MustParse(userID),
+			}
+
+			if err := common.DBConn.Create(&postSave).Error; err != nil {
+				return entity.PostSave{}, fiber.NewError(fiber.StatusInternalServerError, "Error while saving post")
+			}
+
+			return postSave, nil
+		}
+		return entity.PostSave{}, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post save")
+	}
+
+	if err := common.DBConn.Delete(&postSave).Error; err != nil {
+		return entity.PostSave{}, fiber.NewError(fiber.StatusInternalServerError, "Error while deleting post save")
+	}
+
+	return entity.PostSave{}, nil
+}
+
+func (p *PostService) PostGetSavedByUserID(userID string, posts interface{}) error {
 	return nil
 }

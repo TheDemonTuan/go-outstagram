@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"log"
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
@@ -101,8 +100,6 @@ func (p *PostController) PostMeLikeByPostID(ctx *fiber.Ctx) error {
 	if !postLike.IsLiked {
 		return common.CreateResponse(ctx, fiber.StatusOK, "Post unliked", postLike)
 	}
-
-	log.Println(entity.PostType(postRecord.Type).PostTypeString())
 
 	// Push notification
 	if currentUserInfo.ID.String() != postUserID {
@@ -267,4 +264,36 @@ func (p *PostController) PostGetByPostID(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post found", post)
+}
+
+func (p *PostController) PostMeSaveByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	postSave, err := p.postService.PostSaveByPostID(postID, currentUserInfo.ID.String())
+	if err != nil {
+		return err
+	}
+
+	if postSave.ID == uuid.Nil {
+		return common.CreateResponse(ctx, fiber.StatusOK, "Post remove save", nil)
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post saved", postSave)
+}
+
+func (p *PostController) PostMeGetAllSaved(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	var postRecords []entity.Post
+	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_saves ON post_saves.post_id = posts.id").Where("post_saves.user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
 }

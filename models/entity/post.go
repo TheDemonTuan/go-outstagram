@@ -46,6 +46,7 @@ type Post struct {
 	PostFiles    []PostFile    `json:"post_files" gorm:"foreignKey:PostID;references:ID"`
 	PostLikes    []PostLike    `json:"post_likes" gorm:"foreignKey:PostID;references:ID"`
 	PostComments []PostComment `json:"post_comments" gorm:"foreignKey:PostID;references:ID"`
+	PostSaves    []PostSave    `json:"post_saves" gorm:"foreignKey:PostID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
