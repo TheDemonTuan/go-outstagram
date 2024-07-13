@@ -49,7 +49,7 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	caption, privacy, files, postType, err := p.postService.PostCreateValidateRequest(form)
+	caption, privacy, files, postType, isHideLike, isHideComment, err := p.postService.PostCreateValidateRequest(form)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -67,7 +67,17 @@ func (p *PostController) PostMeCreate(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	newPost, err := p.postService.PostCreateByUserID(userID, caption, entity.PostPrivacy(privacyInt), postType, localPaths, cloudinaryPaths)
+	isHiddenLike, err := strconv.ParseBool(isHideLike)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	isHiddenComment, err := strconv.ParseBool(isHideComment)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	newPost, err := p.postService.PostCreateByUserID(userID, caption, entity.PostPrivacy(privacyInt), isHiddenLike, isHiddenComment, postType, localPaths, cloudinaryPaths)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -131,6 +141,34 @@ func (p *PostController) PostMeEditByPostID(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post edited", post)
+}
+
+func (p *PostController) PostHiddenCommentByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	userID := uuid.MustParse(rawUserID)
+
+	isHiddenComment, err := p.postService.PostHiddenCommentByPostID(postID, userID)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post edited", isHiddenComment)
+
+}
+
+func (p *PostController) PostHiddenLikeByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	userID := uuid.MustParse(rawUserID)
+
+	isHiddenLike, err := p.postService.PostHiddenLikeByPostID(postID, userID)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post edited", isHiddenLike)
+
 }
 
 func (p *PostController) PostMeDeleteByPostID(ctx *fiber.Ctx) error {
