@@ -39,6 +39,7 @@ type UserSuggestion {
     avatar: String
     role: Boolean
     active: Boolean
+    is_private: Boolean
 
     posts: [Post]
     friends: [Friend]

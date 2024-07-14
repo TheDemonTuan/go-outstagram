@@ -204,14 +204,15 @@ type ComplexityRoot struct {
 	}
 
 	UserSuggestion struct {
-		Active   func(childComplexity int) int
-		Avatar   func(childComplexity int) int
-		Friends  func(childComplexity int) int
-		FullName func(childComplexity int) int
-		ID       func(childComplexity int) int
-		Posts    func(childComplexity int) int
-		Role     func(childComplexity int) int
-		Username func(childComplexity int) int
+		Active    func(childComplexity int) int
+		Avatar    func(childComplexity int) int
+		Friends   func(childComplexity int) int
+		FullName  func(childComplexity int) int
+		ID        func(childComplexity int) int
+		IsPrivate func(childComplexity int) int
+		Posts     func(childComplexity int) int
+		Role      func(childComplexity int) int
+		Username  func(childComplexity int) int
 	}
 }
 
@@ -1166,6 +1167,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserSuggestion.ID(childComplexity), true
+
+	case "UserSuggestion.is_private":
+		if e.complexity.UserSuggestion.IsPrivate == nil {
+			break
+		}
+
+		return e.complexity.UserSuggestion.IsPrivate(childComplexity), true
 
 	case "UserSuggestion.posts":
 		if e.complexity.UserSuggestion.Posts == nil {
@@ -5282,6 +5290,8 @@ func (ec *executionContext) fieldContext_Query_userSuggestion(ctx context.Contex
 				return ec.fieldContext_UserSuggestion_role(ctx, field)
 			case "active":
 				return ec.fieldContext_UserSuggestion_active(ctx, field)
+			case "is_private":
+				return ec.fieldContext_UserSuggestion_is_private(ctx, field)
 			case "posts":
 				return ec.fieldContext_UserSuggestion_posts(ctx, field)
 			case "friends":
@@ -7531,6 +7541,47 @@ func (ec *executionContext) _UserSuggestion_active(ctx context.Context, field gr
 }
 
 func (ec *executionContext) fieldContext_UserSuggestion_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserSuggestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserSuggestion_is_private(ctx context.Context, field graphql.CollectedField, obj *model.UserSuggestion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserSuggestion_is_private(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsPrivate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserSuggestion_is_private(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UserSuggestion",
 		Field:      field,
@@ -11022,6 +11073,8 @@ func (ec *executionContext) _UserSuggestion(ctx context.Context, sel ast.Selecti
 			out.Values[i] = ec._UserSuggestion_role(ctx, field, obj)
 		case "active":
 			out.Values[i] = ec._UserSuggestion_active(ctx, field, obj)
+		case "is_private":
+			out.Values[i] = ec._UserSuggestion_is_private(ctx, field, obj)
 		case "posts":
 			field := field
 

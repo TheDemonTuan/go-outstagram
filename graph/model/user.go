@@ -27,12 +27,13 @@ type UserProfile struct {
 }
 
 type UserSuggestion struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	FullName string `json:"full_name"`
-	Avatar   string `json:"avatar"`
-	Role     bool   `json:"role"`
-	Active   bool   `json:"active"`
+	ID        string `json:"id"`
+	Username  string `json:"username"`
+	FullName  string `json:"full_name"`
+	Avatar    string `json:"avatar"`
+	Role      bool   `json:"role"`
+	Active    bool   `json:"active"`
+	IsPrivate bool   `json:"is_private"`
 
 	Posts   []*Post `json:"posts" gorm:"-"`
 	Friends []*User `json:"friends" gorm:"-"`

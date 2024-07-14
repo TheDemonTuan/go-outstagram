@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"outstagram/common"
 	"outstagram/graph/model"
@@ -212,6 +213,8 @@ func (r *queryResolver) UserSuggestion(ctx context.Context, count int) ([]*model
 	if err := r.userService.UserSuggestion(currentUserID, count, &userSuggestions); err != nil {
 		return nil, err
 	}
+
+	log.Println("userSuggestions", userSuggestions)
 
 	return userSuggestions, nil
 }
