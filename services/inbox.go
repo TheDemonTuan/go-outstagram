@@ -50,11 +50,15 @@ func (ib *InboxService) SendMessage(fromUserInfo entity.User, toUserName, messag
 	data := map[string]string{}
 	data["type"] = "inbox-action"
 	data["action"] = "send"
-	data["message"] = "accepted your friend request!"
+	data["message"] = "send you a message: " + message
 	data["fromUserID"] = fromUserInfo.ID.String()
+	data["toUserID"] = userRecord.ID.String()
 	data["username"] = fromUserInfo.Username
 	data["toUserName"] = userRecord.Username
-	//data["avatar"] = currentUserInfo.Avatar
+	data["lastMessage"] = message
+	data["avatar"] = fromUserInfo.Avatar
+	data["full_name"] = fromUserInfo.FullName
+	data["messageID"] = inboxRecord.ID.String()
 	data["createdAt"] = time.Now().Format(time.RFC3339)
 
 	if err := common.PusherClient.Trigger(userRecord.ID.String(), "internal-socket", data); err != nil {
@@ -77,7 +81,7 @@ func (ib *InboxService) InboxGetAllByUserName(fromUserID, username string, inbox
 		return errors.New("you can't send message to yourself")
 	}
 
-	if err := common.DBConn.Model(entity.Inbox{}).Where("from_user_id = ? OR to_user_id = ?", userRecord.ID, userRecord.ID).Order("created_at ASC").Find(inboxRecords).Error; err != nil {
+	if err := common.DBConn.Model(entity.Inbox{}).Where("(from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?) ", fromUserID, userRecord.ID.String(), userRecord.ID.String(), fromUserID).Order("created_at ASC").Find(inboxRecords).Error; err != nil {
 		return errors.New("error while getting inbox records")
 	}
 

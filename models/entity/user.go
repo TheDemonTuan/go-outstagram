@@ -21,11 +21,11 @@ func (u UserOAuth) EnumIndex() int {
 
 type User struct {
 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
-	Username  string    `json:"username" gorm:"uniqueIndex;not null;size:50" `
+	Username  string    `json:"username" gorm:"unique;index;not null;size:50" `
 	Password  string    `json:"-" gorm:"not null;size:255"`
 	FullName  string    `json:"full_name" gorm:"index;not null;size:100"`
-	Email     string    `json:"email" gorm:"uniqueIndex;not null;size:100"`
-	Phone     string    `json:"phone" gorm:"uniqueIndex;size:15"`
+	Email     string    `json:"email" gorm:"unique;index;not null;size:100"`
+	Phone     string    `json:"phone" gorm:"unique;index;size:15"`
 	Avatar    string    `json:"avatar" gorm:"size:255"`
 	Bio       string    `json:"bio" gorm:"size:255"`
 	Birthday  time.Time `json:"birthday" gorm:"not null"`

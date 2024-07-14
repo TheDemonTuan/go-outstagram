@@ -34,6 +34,7 @@ type UserSuggestion struct {
 	Role      bool   `json:"role"`
 	Active    bool   `json:"active"`
 	IsPrivate bool   `json:"is_private"`
+	CreatedAt string `json:"created_at"`
 
 	Posts   []*Post `json:"posts" gorm:"-"`
 	Friends []*User `json:"friends" gorm:"-"`
