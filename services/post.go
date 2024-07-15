@@ -609,3 +609,22 @@ func (p *PostService) PostSaveByPostID(postID, userID string) (entity.PostSave, 
 func (p *PostService) PostGetSavedByUserID(userID string, posts interface{}) error {
 	return nil
 }
+
+func (p *PostService) PostBlockByPostID(postID string) (bool, error) {
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+	}
+
+	post.Active = !post.Active
+
+	if err := common.DBConn.Save(&post).Error; err != nil {
+		return false, fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	}
+
+	return post.Active, nil
+
+}

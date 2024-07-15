@@ -12,6 +12,7 @@ func adminRouter(r fiber.Router) {
 	userService := services.NewUserService()
 	adminController := controllers.NewAdminController(adminService, postService, userService)
 
-	r.Add("DELETE", "posts/:postID", adminController.AdminDeletePostByPostID)
+	r.Add("DELETE", "posts/:postID/:userID", adminController.AdminDeletePostByPostID)
 	r.Add("POST", "ban/users/:userID", adminController.AdminBanUserByUserID)
+	r.Add("POST", "block/posts/:postID", adminController.AdminBlockPostByPostID)
 }

@@ -162,40 +162,22 @@ func (u *UserService) UserMeSaveAvatarToDB(userID string, secureURL string) erro
 	return nil
 }
 
-func (u *UserService) UserBanByUserID(userID string) error {
+func (u *UserService) UserBanByUserID(userID string) (bool, error) {
 	var user entity.User
 	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
+			return false, fiber.NewError(fiber.StatusBadRequest, "User not found")
 		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
+		return false, fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
 	}
 
-	user.Active = false
+	user.Active = !user.Active
 
-	if err := common.DBConn.Save(&user).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+	if err := common.DBConn.Omit("phone").Save(&user).Error; err != nil {
+		return false, fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
 	}
 
-	return nil
-}
-
-func (u *UserService) UserUnbanByUserID(userID string) error {
-	var user entity.User
-	if err := common.DBConn.Where("id = ?", userID).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fiber.NewError(fiber.StatusBadRequest, "User not found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying user")
-	}
-
-	user.Active = true
-
-	if err := common.DBConn.Save(&user).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
-	}
-
-	return nil
+	return user.Active, nil
 }
 
 func (u *UserService) UserMeEditProfileValidateRequest(userRecord *req.UserMeUpdate) error {

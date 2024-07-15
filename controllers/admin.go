@@ -24,7 +24,7 @@ func NewAdminController(adminService *services.AdminService, postService *servic
 
 func (a *AdminController) AdminDeletePostByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
-	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	rawUserID := ctx.Params("userID")
 	userID := uuid.MustParse(rawUserID)
 
 	if err := a.postService.PostDeleteByPostID(postID, userID); err != nil {
@@ -42,44 +42,26 @@ func (a *AdminController) AdminBanUserByUserID(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	if err := a.userService.UserBanByUserID(userRecord.ID.String()); err != nil {
+	userActive, err := a.userService.UserBanByUserID(userRecord.ID.String())
+	if err != nil {
 		return err
 	}
 
-	return common.CreateResponse(ctx, fiber.StatusOK, "User banned", nil)
+	if userActive == true {
+		return common.CreateResponse(ctx, fiber.StatusOK, "User unbanned", userActive)
+
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "User banned", userActive)
 }
 
-func (a *AdminController) AdminUnbanUserByUserID(ctx *fiber.Ctx) error {
-	userID := ctx.Params("userID")
+func (a *AdminController) AdminBlockPostByPostID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
 
-	var userRecord entity.User
-	if err := a.userService.UserGetByID(userID, &userRecord); err != nil {
+	postActive, err := a.postService.PostBlockByPostID(postID)
+	if err != nil {
 		return err
 	}
 
-	if err := a.userService.UserUnbanByUserID(userRecord.ID.String()); err != nil {
-		return err
-	}
-
-	return common.CreateResponse(ctx, fiber.StatusOK, "User unbanned", nil)
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post blocked", postActive)
 }
-
-//func (a *AdminController) AdminBlockPostByPostID(ctx *fiber.Ctx) error {
-//	postID := ctx.Params("postID")
-//
-//	if err := a.postService.PostBlockByPostID(postID); err != nil {
-//		return err
-//	}
-//
-//	return common.CreateResponse(ctx, fiber.StatusOK, "Post blocked", nil)
-//}
-//
-//func (a *AdminController) AdminUnblockPostByPostID(ctx *fiber.Ctx) error {
-//	postID := ctx.Params("postID")
-//
-//	if err := a.postService.PostUnblockByPostID(postID); err != nil {
-//		return err
-//	}
-//
-//	return common.CreateResponse(ctx, fiber.StatusOK, "Post unblocked", nil)
-//}
