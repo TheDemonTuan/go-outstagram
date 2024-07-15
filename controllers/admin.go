@@ -65,3 +65,19 @@ func (a *AdminController) AdminBlockPostByPostID(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post blocked", postActive)
 }
+
+func (a *AdminController) AdminDeleteCommentOnPostByCommentID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+
+	rawUserID := ctx.Params("userID")
+	userID := uuid.MustParse(rawUserID)
+
+	rawCommentID := ctx.Params("commentID")
+	commentID := uuid.MustParse(rawCommentID)
+
+	if err := a.postService.PostDeleteCommentOnPostByCommentID(postID, userID, commentID); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Comment deleted", nil)
+}

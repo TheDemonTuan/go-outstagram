@@ -297,3 +297,41 @@ func (p *PostController) PostMeGetAllSaved(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
 }
+
+func (p *PostController) PostDeleteCommentOnPostByCommentID(ctx *fiber.Ctx) error {
+	postID := ctx.Params("postID")
+
+	commentID, err := uuid.Parse(ctx.Params("commentID"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid comment ID")
+	}
+
+	var userID uuid.UUID
+	if rawUserID := ctx.Query("userID"); rawUserID != "" {
+		if userID, err = uuid.Parse(rawUserID); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID")
+		}
+	}
+
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	postRecord, err := p.postService.PostGetByPostID(postID)
+	if err != nil {
+		return err
+	}
+
+	deleteUserID := currentUserInfo.ID
+	if postRecord.UserID == currentUserInfo.ID && userID != uuid.Nil {
+		deleteUserID = userID
+	}
+
+	if err := p.postService.PostDeleteCommentOnPostByCommentID(postID, deleteUserID, commentID); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Comment deleted", nil)
+}
+

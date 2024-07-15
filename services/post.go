@@ -628,3 +628,23 @@ func (p *PostService) PostBlockByPostID(postID string) (bool, error) {
 	return post.Active, nil
 
 }
+
+func (pc *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID uuid.UUID, commentID uuid.UUID) error {
+
+	var postCommentRecord entity.PostComment
+
+	if err := common.DBConn.Where("id = ? and user_id = ? and post_id = ?", commentID, userID, postID).First(&postCommentRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Comment not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	if err := common.DBConn.Delete(&postCommentRecord).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while deleting comment")
+	}
+
+	return nil
+
+}
+

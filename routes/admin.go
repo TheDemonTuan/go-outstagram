@@ -15,4 +15,5 @@ func adminRouter(r fiber.Router) {
 	r.Add("DELETE", "posts/:postID/:userID", adminController.AdminDeletePostByPostID)
 	r.Add("POST", "ban/users/:userID", adminController.AdminBanUserByUserID)
 	r.Add("POST", "block/posts/:postID", adminController.AdminBlockPostByPostID)
+	r.Add("DELETE", "comments/:commentID/:postID/:userID", adminController.AdminDeleteCommentOnPostByCommentID)
 }
