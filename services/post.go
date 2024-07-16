@@ -629,7 +629,7 @@ func (p *PostService) PostBlockByPostID(postID string) (bool, error) {
 
 }
 
-func (pc *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID uuid.UUID, commentID uuid.UUID) error {
+func (p *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID uuid.UUID, commentID uuid.UUID) error {
 
 	var postCommentRecord entity.PostComment
 
@@ -648,3 +648,41 @@ func (pc *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID 
 
 }
 
+func (p *PostService) PostLikeCommentByCommentID(commentID uuid.UUID, userID uuid.UUID, commentRecord *entity.PostComment) (entity.CommentLike, string, error) {
+	if err := common.DBConn.Where("id = ?", commentID).First(&commentRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.CommentLike{}, "", fiber.NewError(fiber.StatusBadRequest, "Comment not found")
+		}
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	var postLikeComment entity.CommentLike
+	if err := common.DBConn.Where("comment_id = ? AND user_id = ?", commentID, userID).First(&postLikeComment).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			postLikeComment = entity.CommentLike{
+				UserID:    userID,
+				CommentID: commentID,
+			}
+
+			if err := common.DBConn.Create(&postLikeComment).Error; err != nil {
+				return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while creating comment like")
+			}
+
+			return postLikeComment, commentRecord.UserID.String(), nil
+		}
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
+	}
+
+	if postLikeComment.IsCommentLiked {
+		postLikeComment.IsCommentLiked = false
+	} else {
+		postLikeComment.IsCommentLiked = true
+	}
+
+	if err := common.DBConn.Save(&postLikeComment).Error; err != nil {
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while updating comment like")
+	}
+
+	return postLikeComment, commentRecord.UserID.String(), nil
+
+}

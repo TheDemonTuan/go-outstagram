@@ -2,9 +2,6 @@ package services
 
 import (
 	"errors"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"outstagram/common"
 	"outstagram/models/entity"
 )
