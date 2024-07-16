@@ -628,3 +628,61 @@ func (p *PostService) PostBlockByPostID(postID string) (bool, error) {
 	return post.Active, nil
 
 }
+
+func (p *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID uuid.UUID, commentID uuid.UUID) error {
+
+	var postCommentRecord entity.PostComment
+
+	if err := common.DBConn.Where("id = ? and user_id = ? and post_id = ?", commentID, userID, postID).First(&postCommentRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Comment not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	if err := common.DBConn.Delete(&postCommentRecord).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while deleting comment")
+	}
+
+	return nil
+
+}
+
+func (p *PostService) PostLikeCommentByCommentID(commentID uuid.UUID, userID uuid.UUID, commentRecord *entity.PostComment) (entity.CommentLike, string, error) {
+	if err := common.DBConn.Where("id = ?", commentID).First(&commentRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.CommentLike{}, "", fiber.NewError(fiber.StatusBadRequest, "Comment not found")
+		}
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
+	var postLikeComment entity.CommentLike
+	if err := common.DBConn.Where("comment_id = ? AND user_id = ?", commentID, userID).First(&postLikeComment).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			postLikeComment = entity.CommentLike{
+				UserID:    userID,
+				CommentID: commentID,
+			}
+
+			if err := common.DBConn.Create(&postLikeComment).Error; err != nil {
+				return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while creating comment like")
+			}
+
+			return postLikeComment, commentRecord.UserID.String(), nil
+		}
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while querying post like")
+	}
+
+	if postLikeComment.IsCommentLiked {
+		postLikeComment.IsCommentLiked = false
+	} else {
+		postLikeComment.IsCommentLiked = true
+	}
+
+	if err := common.DBConn.Save(&postLikeComment).Error; err != nil {
+		return entity.CommentLike{}, "", fiber.NewError(fiber.StatusInternalServerError, "Error while updating comment like")
+	}
+
+	return postLikeComment, commentRecord.UserID.String(), nil
+
+}
