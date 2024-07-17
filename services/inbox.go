@@ -88,11 +88,11 @@ func (ib *InboxService) InboxGetAllByUserName(fromUserID, username string, inbox
 	return nil
 }
 
-func fetchUserAndInboxRecord(userID string, wg *sync.WaitGroup, ch chan<- *model.InboxGetAllBubble, errCh chan<- error) {
+func fetchUserAndInboxRecord(userID, friendUserID string, wg *sync.WaitGroup, ch chan<- *model.InboxGetAllBubble, errCh chan<- error) {
 	defer wg.Done()
 
 	var userRecord entity.User
-	if err := common.DBConn.Select("username", "full_name", "avatar").Where("id = ?", userID).First(&userRecord).Error; err != nil {
+	if err := common.DBConn.Select("username", "full_name", "avatar").Where("id = ?", friendUserID).First(&userRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			errCh <- errors.New("user not found")
 			return
@@ -102,7 +102,7 @@ func fetchUserAndInboxRecord(userID string, wg *sync.WaitGroup, ch chan<- *model
 	}
 
 	var inboxRecord entity.Inbox
-	if err := common.DBConn.Select("message", "created_at").Where("from_user_id = ? OR to_user_id = ?", userID, userID).Order("created_at DESC").First(&inboxRecord).Error; err != nil {
+	if err := common.DBConn.Select("message", "created_at").Where("(from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)", userID, friendUserID, friendUserID, userID).Order("created_at DESC").First(&inboxRecord).Error; err != nil {
 		errCh <- errors.New("error while getting inbox record")
 		return
 	}
@@ -148,9 +148,9 @@ func (ib *InboxService) InboxGetAllBubble(userID string) ([]*model.InboxGetAllBu
 	ch := make(chan *model.InboxGetAllBubble, len(filteredStrings))
 	errCh := make(chan error, len(filteredStrings))
 
-	for _, userID := range filteredStrings {
+	for _, friendUserID := range filteredStrings {
 		wg.Add(1)
-		go fetchUserAndInboxRecord(userID, &wg, ch, errCh)
+		go fetchUserAndInboxRecord(userID, friendUserID, &wg, ch, errCh)
 	}
 
 	wg.Wait()
@@ -169,4 +169,34 @@ func (ib *InboxService) InboxGetAllBubble(userID string) ([]*model.InboxGetAllBu
 	}
 
 	return inboxBubbleRecords, nil
+}
+
+func (ib *InboxService) InboxDeleteByID(userInfo entity.User, inboxID string) error {
+	var inboxRecord entity.Inbox
+	if err := common.DBConn.Where("id = ? AND from_user_id = ?", inboxID, userInfo.ID.String()).First(&inboxRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("inbox record not found")
+		}
+		return errors.New("error while getting inbox record")
+	}
+
+	if err := common.DBConn.Where("id = ? AND from_user_id = ?", inboxID, userInfo.ID.String()).Delete(&entity.Inbox{}).Error; err != nil {
+		return errors.New("error while deleting inbox record")
+	}
+
+	// Push notification
+	data := map[string]string{}
+	data["type"] = "inbox-action"
+	data["isNotNotification"] = "true"
+	data["action"] = "delete"
+	data["message"] = "delete a message"
+	data["fromUserName"] = userInfo.Username
+	data["messageID"] = inboxRecord.ID.String()
+	data["createdAt"] = time.Now().Format(time.RFC3339)
+
+	if err := common.PusherClient.Trigger(inboxRecord.ToUserID.String(), "internal-socket", data); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return nil
 }

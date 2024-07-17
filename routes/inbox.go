@@ -13,4 +13,5 @@ func inboxRouter(r fiber.Router) {
 	inboxController := controllers.NewInboxController(inboxService)
 
 	inboxRoute.Add("POST", ":toUserName", inboxController.InboxSendMessage)
+	inboxRoute.Delete(":inboxID", inboxController.InboxDeleteByID)
 }

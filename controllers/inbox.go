@@ -39,3 +39,19 @@ func (ib *InboxController) InboxSendMessage(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusCreated, "Message sent", inboxRecord)
 }
+
+func (ib *InboxController) InboxDeleteByID(ctx *fiber.Ctx) error {
+	// Get current user
+	currentUserInfo, currenUserInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !currenUserInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	inboxID := ctx.Params("inboxID")
+
+	if err := ib.inboxService.InboxDeleteByID(currentUserInfo, inboxID); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Message deleted", inboxID)
+}
