@@ -23,6 +23,32 @@ type User {
     deleted_at: String
 }
 
+type PostSave{
+    id: ID!
+    user_id: ID!
+    post_id: ID!
+
+    Post: Post
+    User: User
+
+    created_at: String
+    updated_at: String
+}
+
+type CommentLike{
+    id: ID!
+    user_id: ID!
+    comment_id: ID!
+    is_comment_liked: Boolean
+
+    User: User
+    PostComment: PostComment
+
+    created_at: String
+    updated_at: String
+    deleted_at: String
+}
+
 type UserSearch {
     id: ID!
     username: String!
@@ -60,6 +86,8 @@ type Post {
     post_files: [PostFile]
     post_likes: [PostLike]
     post_comments: [PostComment]
+    post_saves: [PostSave]
+    post_comment_likes: [CommentLike]
 
     created_at: String
     updated_at: String

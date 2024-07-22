@@ -2,6 +2,18 @@
 
 package model
 
+type CommentLike struct {
+	ID             string       `json:"id"`
+	UserID         string       `json:"user_id"`
+	CommentID      string       `json:"comment_id"`
+	IsCommentLiked *bool        `json:"is_comment_liked,omitempty"`
+	User           *User        `json:"User,omitempty"`
+	PostComment    *PostComment `json:"PostComment,omitempty"`
+	CreatedAt      *string      `json:"created_at,omitempty"`
+	UpdatedAt      *string      `json:"updated_at,omitempty"`
+	DeletedAt      *string      `json:"deleted_at,omitempty"`
+}
+
 type InboxFile struct {
 	ID        string  `json:"id"`
 	InboxID   string  `json:"inbox_id"`
@@ -30,6 +42,16 @@ type PostFile struct {
 	CreatedAt *string `json:"created_at,omitempty"`
 	UpdatedAt *string `json:"updated_at,omitempty"`
 	DeletedAt *string `json:"deleted_at,omitempty"`
+}
+
+type PostSave struct {
+	ID        string  `json:"id"`
+	UserID    string  `json:"user_id"`
+	PostID    string  `json:"post_id"`
+	Post      *Post   `json:"Post,omitempty"`
+	User      *User   `json:"User,omitempty"`
+	CreatedAt *string `json:"created_at,omitempty"`
+	UpdatedAt *string `json:"updated_at,omitempty"`
 }
 
 type Query struct {

@@ -12,10 +12,12 @@ type Post struct {
 	Type          entity.PostType    `json:"type"`
 	Active        bool               `json:"active"`
 
-	User         *User          `json:"user"`
-	PostFiles    []*PostFile    `json:"post_files"`
-	PostLikes    []*PostLike    `json:"post_likes"`
-	PostComments []*PostComment `json:"post_comments"`
+	User             *User          `json:"user"`
+	PostFiles        []*PostFile    `json:"post_files"`
+	PostLikes        []*PostLike    `json:"post_likes"`
+	PostComments     []*PostComment `json:"post_comments"`
+	PostSaves        []*PostSave    `json:"post_saves"`
+	PostCommentLikes []*CommentLike `json:"post_comment_likes"`
 
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`

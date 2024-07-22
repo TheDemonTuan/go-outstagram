@@ -93,6 +93,10 @@ models:
         resolver: true
       post_likes:
         resolver: true
+      post_saves:
+        resolver: true
+      post_comment_likes:
+        resolver: true
       user:
         resolver: true
   UserProfile:
