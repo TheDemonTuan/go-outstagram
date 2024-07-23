@@ -12,3 +12,7 @@ type PostMeEdit struct {
 type PostMeComment struct {
 	Content string `json:"content" validate:"required,min=1,max=255"`
 }
+
+type PostMeRestore struct {
+	PostIDs []string `json:"post_ids"`
+}
