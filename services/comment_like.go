@@ -12,8 +12,8 @@ func NewCommentLikeService() *CommentLikeService {
 	return &CommentLikeService{}
 }
 
-func (cl *CommentLikeService) CommentLikeGetAllByCommentID(commentID string, commentLikes interface{}) error {
-	if err := common.DBConn.Model(&entity.CommentLike{}).Where("comment_id = ? AND is_comment_liked = ?", commentID, true).Find(commentLikes).Error; err != nil {
+func (cl *CommentLikeService) CommentLikeGetAllByCommentID(postID string, commentLikes interface{}) error {
+	if err := common.DBConn.Model(&entity.CommentLike{}).Joins("JOIN post_comments ON post_comments.id = comment_likes.comment_id").Where("post_comments.post_id = ? AND comment_likes.is_comment_liked = ?", postID, true).Find(commentLikes).Error; err != nil {
 		return errors.New("error when getting comment likes by comment id")
 	}
 
