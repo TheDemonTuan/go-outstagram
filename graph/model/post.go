@@ -16,8 +16,8 @@ type Post struct {
 	PostFiles        []*PostFile    `json:"post_files"`
 	PostLikes        []*PostLike    `json:"post_likes"`
 	PostComments     []*PostComment `json:"post_comments"`
-	PostSaves        []*PostSave    `json:"post_saves"`
-	PostCommentLikes []*CommentLike `json:"post_comment_likes"`
+	PostSaves        []*PostSave    `json:"post_saves" gorm:"-"`
+	PostCommentLikes []*CommentLike `json:"post_comment_likes" gorm:"-"`
 
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
