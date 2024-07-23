@@ -130,12 +130,22 @@ func (r *postResolver) PostComments(ctx context.Context, obj *model.Post) ([]*mo
 
 // PostSaves is the resolver for the post_saves field.
 func (r *postResolver) PostSaves(ctx context.Context, obj *model.Post) ([]*model.PostSave, error) {
-	panic(fmt.Errorf("not implemented: PostSaves - post_saves"))
+	var postSaveRecords []*model.PostSave
+	if err := r.postSaveService.PostSaveGetAllByPostID(obj.ID, &postSaveRecords); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+	return postSaveRecords, nil
+
 }
 
 // PostCommentLikes is the resolver for the post_comment_likes field.
 func (r *postResolver) PostCommentLikes(ctx context.Context, obj *model.Post) ([]*model.CommentLike, error) {
-	panic(fmt.Errorf("not implemented: PostCommentLikes - post_comment_likes"))
+	var commentLikeRecords []*model.CommentLike
+	if err := r.commentLikeService.CommentLikeGetAllByCommentID(obj.ID, &commentLikeRecords); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return commentLikeRecords, nil
 }
 
 // User is the resolver for the user field.

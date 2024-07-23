@@ -686,3 +686,24 @@ func (p *PostService) PostLikeCommentByCommentID(commentID uuid.UUID, userID uui
 	return postLikeComment, commentRecord.UserID.String(), nil
 
 }
+
+func (p *PostService) PostMeRestoreByPostID(userID string, postIDs []string) ([]entity.Post, error) {
+	var restoredPosts []entity.Post
+
+	for _, postID := range postIDs {
+		var postRecord entity.Post
+		err := common.DBConn.Omit("caption").Unscoped().Model(&entity.Post{}).
+			Where("id = ? AND user_id = ?", postID, userID).
+			Update("deleted_at", gorm.Expr("NULL")). // Đây là phần quan trọng
+			Find(&postRecord).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fiber.NewError(fiber.StatusBadRequest, "Post not found")
+			}
+			return nil, fiber.NewError(fiber.StatusInternalServerError, "Error while querying post) ")
+		}
+		restoredPosts = append(restoredPosts, postRecord)
+	}
+
+	return restoredPosts, nil
+}

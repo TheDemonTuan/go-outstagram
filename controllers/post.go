@@ -375,3 +375,33 @@ func (p *PostController) PostMeLikeCommentByCommentID(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Comment liked", postCommentLike)
 
 }
+
+func (p *PostController) PostMeGetAllDeletedByUserID(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	var postRecords []entity.Post
+
+	if err := common.DBConn.Unscoped().Model(&entity.Post{}).Where("user_id = ? AND deleted_at IS NOT NULL", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No deleted posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Deleted posts found", postRecords)
+}
+
+func (p *PostController) PostMeRestoreByPostID(ctx *fiber.Ctx) error {
+
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	bodyData, err := common.RequestBodyValidator[req.PostMeRestore](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	postRestore, err := p.postService.PostMeRestoreByPostID(rawUserID, bodyData.PostIDs)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post restored", postRestore)
+}
