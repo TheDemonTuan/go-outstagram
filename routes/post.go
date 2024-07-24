@@ -25,7 +25,7 @@ func postRouter(r fiber.Router) {
 	postRoute.Add("POST", "me/comment/like/:commentID", postController.PostMeLikeCommentByCommentID)
 	postRoute.Add("PUT", "me/:postID", postController.PostMeEditByPostID)
 	postRoute.Add("PATCH", "me/isHiddenComment/:postID", postController.PostHiddenCommentByPostID)
-	postRoute.Add("PATCH", "me/isHiddenLike/:postID", postController.PostHiddenCommentByPostID)
+	postRoute.Add("PATCH", "me/isHiddenLike/:postID", postController.PostHiddenLikeByPostID)
 	postRoute.Add("PATCH", "me/restore", postController.PostMeRestoreByPostID)
 	postRoute.Add("DELETE", "me/:postID", postController.PostMeDeleteByPostID)
 
