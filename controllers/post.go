@@ -288,7 +288,8 @@ func (p *PostController) PostMeSaveByPostID(ctx *fiber.Ctx) error {
 func (p *PostController) PostMeGetAllSaved(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	var postRecords []entity.Post
-	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_saves ON post_saves.post_id = posts.id").Where("post_saves.user_id = ?", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_saves ON post_saves.post_id = posts.id").Joins("JOIN users ON users.id = posts.user_id").Where("post_saves.user_id = ?", rawUserID).Where("posts.active = ?", true).
+		Where("users.active = ?", true).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No posts found")
 		}
