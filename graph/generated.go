@@ -39,6 +39,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	CommentLike() CommentLikeResolver
 	Friend() FriendResolver
 	Inbox() InboxResolver
 	Post() PostResolver
@@ -60,7 +61,7 @@ type ComplexityRoot struct {
 		DeletedAt      func(childComplexity int) int
 		ID             func(childComplexity int) int
 		IsCommentLiked func(childComplexity int) int
-		PostComment    func(childComplexity int) int
+		Parent         func(childComplexity int) int
 		UpdatedAt      func(childComplexity int) int
 		User           func(childComplexity int) int
 		UserID         func(childComplexity int) int
@@ -241,6 +242,10 @@ type ComplexityRoot struct {
 	}
 }
 
+type CommentLikeResolver interface {
+	User(ctx context.Context, obj *model.CommentLike) (*model.User, error)
+	Parent(ctx context.Context, obj *model.CommentLike) (*model.PostComment, error)
+}
 type FriendResolver interface {
 	FromUserInfo(ctx context.Context, obj *model.Friend) (*model.User, error)
 	ToUserInfo(ctx context.Context, obj *model.Friend) (*model.User, error)
@@ -349,12 +354,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.CommentLike.IsCommentLiked(childComplexity), true
 
-	case "CommentLike.PostComment":
-		if e.complexity.CommentLike.PostComment == nil {
+	case "CommentLike.parent":
+		if e.complexity.CommentLike.Parent == nil {
 			break
 		}
 
-		return e.complexity.CommentLike.PostComment(childComplexity), true
+		return e.complexity.CommentLike.Parent(childComplexity), true
 
 	case "CommentLike.updated_at":
 		if e.complexity.CommentLike.UpdatedAt == nil {
@@ -363,7 +368,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.CommentLike.UpdatedAt(childComplexity), true
 
-	case "CommentLike.User":
+	case "CommentLike.user":
 		if e.complexity.CommentLike.User == nil {
 			break
 		}
@@ -1864,8 +1869,8 @@ func (ec *executionContext) fieldContext_CommentLike_is_comment_liked(_ context.
 	return fc, nil
 }
 
-func (ec *executionContext) _CommentLike_User(ctx context.Context, field graphql.CollectedField, obj *model.CommentLike) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_CommentLike_User(ctx, field)
+func (ec *executionContext) _CommentLike_user(ctx context.Context, field graphql.CollectedField, obj *model.CommentLike) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CommentLike_user(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1878,7 +1883,7 @@ func (ec *executionContext) _CommentLike_User(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.User, nil
+		return ec.resolvers.CommentLike().User(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1892,12 +1897,12 @@ func (ec *executionContext) _CommentLike_User(ctx context.Context, field graphql
 	return ec.marshalOUser2ᚖoutstagramᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_CommentLike_User(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CommentLike_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CommentLike",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -1939,8 +1944,8 @@ func (ec *executionContext) fieldContext_CommentLike_User(_ context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _CommentLike_PostComment(ctx context.Context, field graphql.CollectedField, obj *model.CommentLike) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_CommentLike_PostComment(ctx, field)
+func (ec *executionContext) _CommentLike_parent(ctx context.Context, field graphql.CollectedField, obj *model.CommentLike) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CommentLike_parent(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1953,7 +1958,7 @@ func (ec *executionContext) _CommentLike_PostComment(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.PostComment, nil
+		return ec.resolvers.CommentLike().Parent(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1967,12 +1972,12 @@ func (ec *executionContext) _CommentLike_PostComment(ctx context.Context, field 
 	return ec.marshalOPostComment2ᚖoutstagramᚋgraphᚋmodelᚐPostComment(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_CommentLike_PostComment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CommentLike_parent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CommentLike",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -4932,10 +4937,10 @@ func (ec *executionContext) fieldContext_PostComment_comment_likes(_ context.Con
 				return ec.fieldContext_CommentLike_comment_id(ctx, field)
 			case "is_comment_liked":
 				return ec.fieldContext_CommentLike_is_comment_liked(ctx, field)
-			case "User":
-				return ec.fieldContext_CommentLike_User(ctx, field)
-			case "PostComment":
-				return ec.fieldContext_CommentLike_PostComment(ctx, field)
+			case "user":
+				return ec.fieldContext_CommentLike_user(ctx, field)
+			case "parent":
+				return ec.fieldContext_CommentLike_parent(ctx, field)
 			case "created_at":
 				return ec.fieldContext_CommentLike_created_at(ctx, field)
 			case "updated_at":
@@ -10668,24 +10673,86 @@ func (ec *executionContext) _CommentLike(ctx context.Context, sel ast.SelectionS
 		case "id":
 			out.Values[i] = ec._CommentLike_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "user_id":
 			out.Values[i] = ec._CommentLike_user_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "comment_id":
 			out.Values[i] = ec._CommentLike_comment_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "is_comment_liked":
 			out.Values[i] = ec._CommentLike_is_comment_liked(ctx, field, obj)
-		case "User":
-			out.Values[i] = ec._CommentLike_User(ctx, field, obj)
-		case "PostComment":
-			out.Values[i] = ec._CommentLike_PostComment(ctx, field, obj)
+		case "user":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CommentLike_user(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "parent":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CommentLike_parent(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._CommentLike_created_at(ctx, field, obj)
 		case "updated_at":

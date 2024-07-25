@@ -141,3 +141,9 @@ models:
     fields:
       friends:
         resolver: true
+  CommentLike:
+    fields:
+      user:
+        resolver: true
+      parent:
+        resolver: true

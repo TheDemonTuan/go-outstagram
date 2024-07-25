@@ -7,8 +7,8 @@ type CommentLike struct {
 	UserID         string       `json:"user_id"`
 	CommentID      string       `json:"comment_id"`
 	IsCommentLiked *bool        `json:"is_comment_liked,omitempty"`
-	User           *User        `json:"User,omitempty"`
-	PostComment    *PostComment `json:"PostComment,omitempty"`
+	User           *User        `json:"user,omitempty"`
+	Parent         *PostComment `json:"parent,omitempty"`
 	CreatedAt      *string      `json:"created_at,omitempty"`
 	UpdatedAt      *string      `json:"updated_at,omitempty"`
 	DeletedAt      *string      `json:"deleted_at,omitempty"`

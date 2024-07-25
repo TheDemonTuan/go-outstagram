@@ -41,8 +41,8 @@ type CommentLike{
     comment_id: ID!
     is_comment_liked: Boolean
 
-    User: User
-    PostComment: PostComment
+    user: User
+    parent: PostComment
 
     created_at: String
     updated_at: String

@@ -15,6 +15,16 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
+// User is the resolver for the user field.
+func (r *commentLikeResolver) User(ctx context.Context, obj *model.CommentLike) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: User - user"))
+}
+
+// Parent is the resolver for the parent field.
+func (r *commentLikeResolver) Parent(ctx context.Context, obj *model.CommentLike) (*model.PostComment, error) {
+	panic(fmt.Errorf("not implemented: Parent - parent"))
+}
+
 // FromUserInfo is the resolver for the from_user_info field.
 func (r *friendResolver) FromUserInfo(ctx context.Context, obj *model.Friend) (*model.User, error) {
 	var userRecord *model.User
@@ -408,6 +418,9 @@ func (r *userSuggestionResolver) Friends(ctx context.Context, obj *model.UserSug
 	return friends, nil
 }
 
+// CommentLike returns CommentLikeResolver implementation.
+func (r *Resolver) CommentLike() CommentLikeResolver { return &commentLikeResolver{r} }
+
 // Friend returns FriendResolver implementation.
 func (r *Resolver) Friend() FriendResolver { return &friendResolver{r} }
 
@@ -435,6 +448,7 @@ func (r *Resolver) UserProfile() UserProfileResolver { return &userProfileResolv
 // UserSuggestion returns UserSuggestionResolver implementation.
 func (r *Resolver) UserSuggestion() UserSuggestionResolver { return &userSuggestionResolver{r} }
 
+type commentLikeResolver struct{ *Resolver }
 type friendResolver struct{ *Resolver }
 type inboxResolver struct{ *Resolver }
 type postResolver struct{ *Resolver }
