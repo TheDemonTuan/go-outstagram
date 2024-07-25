@@ -87,7 +87,6 @@ type Post {
     post_likes: [PostLike]
     post_comments: [PostComment]
     post_saves: [PostSave]
-    post_comment_likes: [CommentLike]
 
     created_at: String
     updated_at: String
@@ -127,6 +126,7 @@ type PostComment {
 
     user: User
     parent: PostComment
+    comment_likes: [CommentLike]
 
     created_at: String
     updated_at: String

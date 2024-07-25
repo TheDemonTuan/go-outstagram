@@ -135,17 +135,6 @@ func (r *postResolver) PostSaves(ctx context.Context, obj *model.Post) ([]*model
 		return nil, gqlerror.Errorf(err.Error())
 	}
 	return postSaveRecords, nil
-
-}
-
-// PostCommentLikes is the resolver for the post_comment_likes field.
-func (r *postResolver) PostCommentLikes(ctx context.Context, obj *model.Post) ([]*model.CommentLike, error) {
-	var commentLikeRecords []*model.CommentLike
-	if err := r.commentLikeService.CommentLikeGetAllByCommentID(obj.ID, &commentLikeRecords); err != nil {
-		return nil, gqlerror.Errorf(err.Error())
-	}
-
-	return commentLikeRecords, nil
 }
 
 // User is the resolver for the user field.
@@ -169,6 +158,16 @@ func (r *postCommentResolver) Parent(ctx context.Context, obj *model.PostComment
 	}
 
 	return postCommentRecord, nil
+}
+
+// CommentLikes is the resolver for the comment_likes field.
+func (r *postCommentResolver) CommentLikes(ctx context.Context, obj *model.PostComment) ([]*model.CommentLike, error) {
+	var commentLikeRecords []*model.CommentLike
+	if err := r.commentLikeService.CommentLikeGetAllByCommentID(obj.ID, &commentLikeRecords); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return commentLikeRecords, nil
 }
 
 // User is the resolver for the user field.

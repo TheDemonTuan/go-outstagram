@@ -113,37 +113,37 @@ type ComplexityRoot struct {
 	}
 
 	Post struct {
-		Active           func(childComplexity int) int
-		Caption          func(childComplexity int) int
-		CreatedAt        func(childComplexity int) int
-		DeletedAt        func(childComplexity int) int
-		ID               func(childComplexity int) int
-		IsHideComment    func(childComplexity int) int
-		IsHideLike       func(childComplexity int) int
-		PostCommentLikes func(childComplexity int) int
-		PostComments     func(childComplexity int) int
-		PostFiles        func(childComplexity int) int
-		PostLikes        func(childComplexity int) int
-		PostSaves        func(childComplexity int) int
-		Privacy          func(childComplexity int) int
-		Type             func(childComplexity int) int
-		UpdatedAt        func(childComplexity int) int
-		User             func(childComplexity int) int
-		UserID           func(childComplexity int) int
+		Active        func(childComplexity int) int
+		Caption       func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
+		DeletedAt     func(childComplexity int) int
+		ID            func(childComplexity int) int
+		IsHideComment func(childComplexity int) int
+		IsHideLike    func(childComplexity int) int
+		PostComments  func(childComplexity int) int
+		PostFiles     func(childComplexity int) int
+		PostLikes     func(childComplexity int) int
+		PostSaves     func(childComplexity int) int
+		Privacy       func(childComplexity int) int
+		Type          func(childComplexity int) int
+		UpdatedAt     func(childComplexity int) int
+		User          func(childComplexity int) int
+		UserID        func(childComplexity int) int
 	}
 
 	PostComment struct {
-		Active    func(childComplexity int) int
-		Content   func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
-		DeletedAt func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Parent    func(childComplexity int) int
-		ParentID  func(childComplexity int) int
-		PostID    func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
-		User      func(childComplexity int) int
-		UserID    func(childComplexity int) int
+		Active       func(childComplexity int) int
+		CommentLikes func(childComplexity int) int
+		Content      func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		DeletedAt    func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Parent       func(childComplexity int) int
+		ParentID     func(childComplexity int) int
+		PostID       func(childComplexity int) int
+		UpdatedAt    func(childComplexity int) int
+		User         func(childComplexity int) int
+		UserID       func(childComplexity int) int
 	}
 
 	PostFile struct {
@@ -259,11 +259,11 @@ type PostResolver interface {
 	PostLikes(ctx context.Context, obj *model.Post) ([]*model.PostLike, error)
 	PostComments(ctx context.Context, obj *model.Post) ([]*model.PostComment, error)
 	PostSaves(ctx context.Context, obj *model.Post) ([]*model.PostSave, error)
-	PostCommentLikes(ctx context.Context, obj *model.Post) ([]*model.CommentLike, error)
 }
 type PostCommentResolver interface {
 	User(ctx context.Context, obj *model.PostComment) (*model.User, error)
 	Parent(ctx context.Context, obj *model.PostComment) (*model.PostComment, error)
+	CommentLikes(ctx context.Context, obj *model.PostComment) ([]*model.CommentLike, error)
 }
 type PostLikeResolver interface {
 	User(ctx context.Context, obj *model.PostLike) (*model.User, error)
@@ -664,13 +664,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Post.IsHideLike(childComplexity), true
 
-	case "Post.post_comment_likes":
-		if e.complexity.Post.PostCommentLikes == nil {
-			break
-		}
-
-		return e.complexity.Post.PostCommentLikes(childComplexity), true
-
 	case "Post.post_comments":
 		if e.complexity.Post.PostComments == nil {
 			break
@@ -740,6 +733,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PostComment.Active(childComplexity), true
+
+	case "PostComment.comment_likes":
+		if e.complexity.PostComment.CommentLikes == nil {
+			break
+		}
+
+		return e.complexity.PostComment.CommentLikes(childComplexity), true
 
 	case "PostComment.content":
 		if e.complexity.PostComment.Content == nil {
@@ -1991,6 +1991,8 @@ func (ec *executionContext) fieldContext_CommentLike_PostComment(_ context.Conte
 				return ec.fieldContext_PostComment_user(ctx, field)
 			case "parent":
 				return ec.fieldContext_PostComment_parent(ctx, field)
+			case "comment_likes":
+				return ec.fieldContext_PostComment_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_PostComment_created_at(ctx, field)
 			case "updated_at":
@@ -4294,6 +4296,8 @@ func (ec *executionContext) fieldContext_Post_post_comments(_ context.Context, f
 				return ec.fieldContext_PostComment_user(ctx, field)
 			case "parent":
 				return ec.fieldContext_PostComment_parent(ctx, field)
+			case "comment_likes":
+				return ec.fieldContext_PostComment_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_PostComment_created_at(ctx, field)
 			case "updated_at":
@@ -4359,67 +4363,6 @@ func (ec *executionContext) fieldContext_Post_post_saves(_ context.Context, fiel
 				return ec.fieldContext_PostSave_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PostSave", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Post_post_comment_likes(ctx context.Context, field graphql.CollectedField, obj *model.Post) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Post_post_comment_likes(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Post().PostCommentLikes(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*model.CommentLike)
-	fc.Result = res
-	return ec.marshalOCommentLike2ᚕᚖoutstagramᚋgraphᚋmodelᚐCommentLike(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Post_post_comment_likes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Post",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_CommentLike_id(ctx, field)
-			case "user_id":
-				return ec.fieldContext_CommentLike_user_id(ctx, field)
-			case "comment_id":
-				return ec.fieldContext_CommentLike_comment_id(ctx, field)
-			case "is_comment_liked":
-				return ec.fieldContext_CommentLike_is_comment_liked(ctx, field)
-			case "User":
-				return ec.fieldContext_CommentLike_User(ctx, field)
-			case "PostComment":
-				return ec.fieldContext_CommentLike_PostComment(ctx, field)
-			case "created_at":
-				return ec.fieldContext_CommentLike_created_at(ctx, field)
-			case "updated_at":
-				return ec.fieldContext_CommentLike_updated_at(ctx, field)
-			case "deleted_at":
-				return ec.fieldContext_CommentLike_deleted_at(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CommentLike", field.Name)
 		},
 	}
 	return fc, nil
@@ -4930,6 +4873,8 @@ func (ec *executionContext) fieldContext_PostComment_parent(_ context.Context, f
 				return ec.fieldContext_PostComment_user(ctx, field)
 			case "parent":
 				return ec.fieldContext_PostComment_parent(ctx, field)
+			case "comment_likes":
+				return ec.fieldContext_PostComment_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_PostComment_created_at(ctx, field)
 			case "updated_at":
@@ -4938,6 +4883,67 @@ func (ec *executionContext) fieldContext_PostComment_parent(_ context.Context, f
 				return ec.fieldContext_PostComment_deleted_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PostComment", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PostComment_comment_likes(ctx context.Context, field graphql.CollectedField, obj *model.PostComment) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PostComment_comment_likes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PostComment().CommentLikes(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CommentLike)
+	fc.Result = res
+	return ec.marshalOCommentLike2ᚕᚖoutstagramᚋgraphᚋmodelᚐCommentLike(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PostComment_comment_likes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PostComment",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CommentLike_id(ctx, field)
+			case "user_id":
+				return ec.fieldContext_CommentLike_user_id(ctx, field)
+			case "comment_id":
+				return ec.fieldContext_CommentLike_comment_id(ctx, field)
+			case "is_comment_liked":
+				return ec.fieldContext_CommentLike_is_comment_liked(ctx, field)
+			case "User":
+				return ec.fieldContext_CommentLike_User(ctx, field)
+			case "PostComment":
+				return ec.fieldContext_CommentLike_PostComment(ctx, field)
+			case "created_at":
+				return ec.fieldContext_CommentLike_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_CommentLike_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_CommentLike_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CommentLike", field.Name)
 		},
 	}
 	return fc, nil
@@ -5924,8 +5930,6 @@ func (ec *executionContext) fieldContext_PostSave_Post(_ context.Context, field 
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6461,8 +6465,6 @@ func (ec *executionContext) fieldContext_Query_postByUsername(ctx context.Contex
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6552,8 +6554,6 @@ func (ec *executionContext) fieldContext_Query_postByPostId(ctx context.Context,
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6643,8 +6643,6 @@ func (ec *executionContext) fieldContext_Query_postSuggestions(ctx context.Conte
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6734,8 +6732,6 @@ func (ec *executionContext) fieldContext_Query_postHomePage(ctx context.Context,
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6825,8 +6821,6 @@ func (ec *executionContext) fieldContext_Query_postReel(ctx context.Context, fie
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -6916,8 +6910,6 @@ func (ec *executionContext) fieldContext_Query_postExplores(ctx context.Context,
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -8071,8 +8063,6 @@ func (ec *executionContext) fieldContext_UserProfile_posts(_ context.Context, fi
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -8148,8 +8138,6 @@ func (ec *executionContext) fieldContext_UserProfile_reels(_ context.Context, fi
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -8811,8 +8799,6 @@ func (ec *executionContext) fieldContext_UserSuggestion_posts(_ context.Context,
 				return ec.fieldContext_Post_post_comments(ctx, field)
 			case "post_saves":
 				return ec.fieldContext_Post_post_saves(ctx, field)
-			case "post_comment_likes":
-				return ec.fieldContext_Post_post_comment_likes(ctx, field)
 			case "created_at":
 				return ec.fieldContext_Post_created_at(ctx, field)
 			case "updated_at":
@@ -11390,39 +11376,6 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "post_comment_likes":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Post_post_comment_likes(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "created_at":
 			out.Values[i] = ec._Post_created_at(ctx, field, obj)
 		case "updated_at":
@@ -11527,6 +11480,39 @@ func (ec *executionContext) _PostComment(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._PostComment_parent(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "comment_likes":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PostComment_comment_likes(ctx, field, obj)
 				return res
 			}
 
