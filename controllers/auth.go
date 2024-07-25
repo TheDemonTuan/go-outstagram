@@ -33,6 +33,10 @@ func (c *AuthController) AuthLogin(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
+	if userRecord.Active == false {
+		return fiber.NewError(fiber.StatusUnauthorized, "Account is banned")
+	}
+
 	accessToken, err := c.authService.GenerateAccessToken(userRecord.ID.String())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -149,6 +153,9 @@ func (c *AuthController) AuthOAuthLogin(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
+	if userRecord.Active == false {
+		return fiber.NewError(fiber.StatusUnauthorized, "Account is banned")
+	}
 	accessToken, err := c.authService.GenerateAccessToken(userRecord.ID.String())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())

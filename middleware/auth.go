@@ -33,6 +33,10 @@ func jwtSuccess(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
 
+	if userRecord.Active == false {
+		return fiber.NewError(fiber.StatusUnauthorized, "Account is banned")
+	}
+
 	c.Locals(common.UserIDLocalKey, userID)
 	c.Locals(common.UserInfoLocalKey, userRecord)
 
