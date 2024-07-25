@@ -17,7 +17,12 @@ import (
 
 // User is the resolver for the user field.
 func (r *commentLikeResolver) User(ctx context.Context, obj *model.CommentLike) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: User - user"))
+	var userRecord *model.User
+	if err := r.userService.UserGetByID(obj.UserID, &userRecord); err != nil {
+		return nil, gqlerror.Errorf(err.Error())
+	}
+
+	return userRecord, nil
 }
 
 // Parent is the resolver for the parent field.
