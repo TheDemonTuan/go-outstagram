@@ -233,3 +233,26 @@ func (f *FriendService) GetListFriendID(userID string) ([]string, error) {
 
 	return friends, nil
 }
+
+func (f *FriendService) GetFriendsUserMe(userID string) ([]entity.Friend, error) {
+	_, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	var friends []entity.Friend
+	if err := common.DBConn.Where("(from_user_id = ? OR to_user_id = ?) AND status = ?", userID, userID, entity.FriendAccepted).Preload("ToUser").Preload("FromUser").Find(&friends).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	var friendList []entity.Friend
+	for _, friend := range friends {
+		if friend.FromUserID.String() == userID {
+			friendList = append(friendList, friend)
+		} else {
+			friendList = append(friendList, friend)
+		}
+	}
+
+	return friendList, nil
+}

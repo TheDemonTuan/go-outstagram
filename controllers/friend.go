@@ -142,3 +142,18 @@ func (f *FriendController) GetFriendByUserID(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Friend record", friendRecord)
 }
+
+func (f *FriendController) GetFriendsByUserMe(ctx *fiber.Ctx) error {
+	currentUserID, currenUserIdIsOk := ctx.Locals(common.UserIDLocalKey).(string)
+	if !currenUserIdIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	friendsMe, err := f.friendService.GetFriendsUserMe(currentUserID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Friend list me", friendsMe)
+
+}
