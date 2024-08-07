@@ -17,6 +17,8 @@ func postRouter(r fiber.Router) {
 	//Me API
 	postRoute.Add("GET", "me", postController.PostMeGetAll)
 	postRoute.Add("GET", "me/saved", postController.PostMeGetAllSaved)
+	postRoute.Add("GET", "me/liked", postController.PostMeGetAllLiked)
+	postRoute.Add("GET", "me/commented", postController.PostMeGetAllCommented)
 	postRoute.Add("GET", "me/deleted", postController.PostMeGetAllDeletedByUserID)
 	postRoute.Add("POST", "me", postController.PostMeCreate)
 	postRoute.Add("POST", "me/like/:postID", postController.PostMeLikeByPostID)

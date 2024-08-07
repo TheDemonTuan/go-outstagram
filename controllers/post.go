@@ -406,3 +406,76 @@ func (p *PostController) PostMeRestoreByPostID(ctx *fiber.Ctx) error {
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post restored", postRestore)
 }
+
+func (p *PostController) PostMeGetAllLiked(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	var postRecords []entity.Post
+	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_likes ON post_likes.post_id = posts.id").Joins("JOIN users ON users.id = posts.user_id").Where("post_likes.user_id = ?", rawUserID).Where("posts.active = ?", true).
+		Where("users.active = ?", true).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postRecords)
+
+}
+
+func (p *PostController) PostMeGetAllCommented(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	var postRecords []entity.Post
+
+	// Fetch posts where the user has commented, ensuring unique posts
+	if err := common.DBConn.Model(&entity.Post{}).
+		Joins("JOIN post_comments ON post_comments.post_id = posts.id").
+		Joins("JOIN users ON users.id = posts.user_id").
+		Where("post_comments.user_id = ?", rawUserID).
+		Where("posts.active = ?", true).
+		Where("users.active = ?", true).
+		Preload("PostFiles").
+		Preload("PostLikes").
+		Preload("PostComments").
+		Find(&postRecords).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "No posts found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying posts")
+	}
+
+	// Use a map to ensure unique posts
+	uniquePostMap := make(map[string]entity.Post)
+	for _, post := range postRecords {
+		uniquePostMap[post.ID] = post
+	}
+
+	uniquePosts := make([]entity.Post, 0, len(uniquePostMap))
+	userIDs := make([]uuid.UUID, 0, len(uniquePostMap))
+	for _, post := range uniquePostMap {
+		uniquePosts = append(uniquePosts, post)
+		userIDs = append(userIDs, post.UserID)
+	}
+
+	// Fetch users associated with the posts
+	var users []entity.User
+	if err := common.DBConn.Where("id IN (?)", userIDs).Find(&users).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying users")
+	}
+
+	// Create a map of users for easy lookup
+	userMap := make(map[uuid.UUID]entity.User)
+	for _, user := range users {
+		userMap[user.ID] = user
+	}
+
+	// Create response objects
+	postResponses := make([]req.PostResponse, len(uniquePosts))
+	for i, post := range uniquePosts {
+		postResponses[i] = req.PostResponse{
+			Post: post,
+			User: userMap[post.UserID],
+		}
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postResponses)
+}

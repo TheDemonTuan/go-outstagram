@@ -16,3 +16,8 @@ type PostMeComment struct {
 type PostMeRestore struct {
 	PostIDs []string `json:"post_ids"`
 }
+
+type PostResponse struct {
+	Post entity.Post `json:"post"`
+	User entity.User `json:"user"`
+}
