@@ -180,6 +180,24 @@ func (p *PostController) PostMeDeleteByPostID(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusNoContent, "Post deleted", nil)
 }
 
+func (p *PostController) PostMeDeleteByPostIDs(ctx *fiber.Ctx) error {
+	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
+	userID := uuid.MustParse(rawUserID)
+	bodyData, err := common.RequestBodyValidator[req.PostMeRestore](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	for _, postID := range bodyData.PostIDs {
+		if err := p.postService.PostDeleteByPostID(postID, userID); err != nil {
+			return err
+		}
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusNoContent, "Posts deleted", nil)
+
+}
+
 func (p *PostController) PostMeCommentByPostID(ctx *fiber.Ctx) error {
 	postID := ctx.Params("postID")
 	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
@@ -410,7 +428,7 @@ func (p *PostController) PostMeRestoreByPostID(ctx *fiber.Ctx) error {
 func (p *PostController) PostMeGetAllLiked(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	var postRecords []entity.Post
-	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_likes ON post_likes.post_id = posts.id").Joins("JOIN users ON users.id = posts.user_id").Where("post_likes.user_id = ?", rawUserID).Where("posts.active = ?", true).
+	if err := common.DBConn.Model(&entity.Post{}).Joins("JOIN post_likes ON post_likes.post_id = posts.id").Joins("JOIN users ON users.id = posts.user_id").Where("post_likes.user_id = ?", rawUserID).Where("posts.active = ?", true).Where("post_likes.is_liked = ?", true).
 		Where("users.active = ?", true).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No posts found")
@@ -478,4 +496,53 @@ func (p *PostController) PostMeGetAllCommented(ctx *fiber.Ctx) error {
 	}
 
 	return common.CreateResponse(ctx, fiber.StatusOK, "Posts found", postResponses)
+}
+
+func (p *PostController) PostMeUnLikeByPostIDs(ctx *fiber.Ctx) error {
+	bodyData, err := common.RequestBodyValidator[req.PostMeRestore](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	unlikedPosts := []entity.PostLike{}
+	for _, postID := range bodyData.PostIDs {
+		var postRecord entity.Post
+
+		postLike, postUserID, err := p.postService.PostLikeByPostID(postID, currentUserInfo.ID, &postRecord)
+		if err != nil {
+			return err
+		}
+
+		if currentUserInfo.ID.String() != postUserID {
+			continue
+		}
+		unlikedPosts = append(unlikedPosts, postLike)
+
+	}
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", unlikedPosts)
+}
+
+func (p *PostController) PostDeleteCommentsCommented(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.DeleteCommentsRequest](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+	if !userInfoIsOk {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
+	}
+
+	for _, comment := range bodyData.CommentIDs {
+		if err := p.postService.PostDeleteCommentOnPostByCommentID(comment.PostID, currentUserInfo.ID, comment.CommentID); err != nil {
+			return err
+		}
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Comments deleted", nil)
 }
