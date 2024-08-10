@@ -148,3 +148,20 @@ func (u *UserController) UserMeDeleteAvatar(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "Avatar deleted", userInfo.Avatar)
 
 }
+
+func (u *UserController) UserSendReport(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.UserReport](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	report, err := u.userService.UserSendReportSaveToDB(userInfo.ID, bodyData)
+	if err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Report successfully", report)
+
+}

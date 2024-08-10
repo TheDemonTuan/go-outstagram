@@ -354,6 +354,25 @@ func (p *PostController) PostDeleteCommentOnPostByCommentID(ctx *fiber.Ctx) erro
 	return common.CreateResponse(ctx, fiber.StatusOK, "Comment deleted", nil)
 }
 
+func (p *PostController) PostDeleteCommentsCommented(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.DeleteCommentsRequest](ctx)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	userInfo := ctx.Locals(common.UserInfoLocalKey).(entity.User)
+
+	for _, comment := range bodyData.CommentIDs {
+
+		if err := p.postService.PostDeleteCommentOnPostByCommentID(comment.PostID, userInfo.ID, comment.CommentID); err != nil {
+			return err
+		}
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Comments deleted", nil)
+}
+
 func (p *PostController) PostMeLikeCommentByCommentID(ctx *fiber.Ctx) error {
 	rawCommentID := ctx.Params("commentID")
 	commentID := uuid.MustParse(rawCommentID)
@@ -524,25 +543,4 @@ func (p *PostController) PostMeUnLikeByPostIDs(ctx *fiber.Ctx) error {
 
 	}
 	return common.CreateResponse(ctx, fiber.StatusOK, "Post liked", unlikedPosts)
-}
-
-func (p *PostController) PostDeleteCommentsCommented(ctx *fiber.Ctx) error {
-
-	bodyData, err := common.RequestBodyValidator[req.DeleteCommentsRequest](ctx)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	currentUserInfo, userInfoIsOk := ctx.Locals(common.UserInfoLocalKey).(entity.User)
-	if !userInfoIsOk {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid user")
-	}
-
-	for _, comment := range bodyData.CommentIDs {
-		if err := p.postService.PostDeleteCommentOnPostByCommentID(comment.PostID, currentUserInfo.ID, comment.CommentID); err != nil {
-			return err
-		}
-	}
-
-	return common.CreateResponse(ctx, fiber.StatusOK, "Comments deleted", nil)
 }

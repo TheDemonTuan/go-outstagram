@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"mime/multipart"
@@ -383,4 +384,19 @@ func (u *UserService) UserEditPasswordSaveToDB(ctx *fiber.Ctx, bodyData *req.Use
 
 	return nil
 
+}
+
+func (u *UserService) UserSendReportSaveToDB(userID uuid.UUID, bodyData *req.UserReport) (entity.Report, error) {
+
+	reportRecord := entity.Report{
+		ByUserID: userID,
+		Info:     bodyData.Info,
+		Type:     bodyData.Type,
+		Reason:   bodyData.Reason,
+	}
+	if err := common.DBConn.Save(&reportRecord).Error; err != nil {
+		return entity.Report{}, fiber.NewError(fiber.StatusInternalServerError, "error while add report")
+	}
+
+	return reportRecord, nil
 }

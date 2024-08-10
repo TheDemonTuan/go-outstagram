@@ -44,6 +44,7 @@ type User struct {
 	InboxTo      []Inbox       `json:"-" gorm:"foreignKey:ToUserID;references:ID"`
 	Token        []Token       `json:"-" gorm:"foreignKey:UserID;references:ID"`
 	PostSaves    []PostSave    `json:"-" gorm:"foreignKey:UserID;references:ID"`
+	Reports      []Report      `json:"-" gorm:"foreignKey:ByUserID;references:ID"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

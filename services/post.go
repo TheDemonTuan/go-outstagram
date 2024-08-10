@@ -648,25 +648,6 @@ func (p *PostService) PostDeleteCommentOnPostByCommentID(postID string, userID u
 
 }
 
-//func (p *PostService) PostDeleteCommentsByCommentID(userID uuid.UUID, commentID uuid.UUID) error {
-//
-//	var postCommentRecord entity.PostComment
-//
-//	if err := common.DBConn.Where("id = ? and user_id = ?", commentID, userID).First(&postCommentRecord).Error; err != nil {
-//		if errors.Is(err, gorm.ErrRecordNotFound) {
-//			return fiber.NewError(fiber.StatusBadRequest, "Comment not found")
-//		}
-//		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
-//	}
-//
-//	if err := common.DBConn.Delete(&postCommentRecord).Error; err != nil {
-//		return fiber.NewError(fiber.StatusInternalServerError, "Error while deleting comment")
-//	}
-//
-//	return nil
-//
-//}
-
 func (p *PostService) PostLikeCommentByCommentID(commentID uuid.UUID, userID uuid.UUID, commentRecord *entity.PostComment) (entity.CommentLike, string, error) {
 	if err := common.DBConn.Where("id = ?", commentID).First(&commentRecord).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
