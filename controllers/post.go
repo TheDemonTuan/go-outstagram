@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"log"
 	"outstagram/common"
 	"outstagram/models/entity"
 	"outstagram/models/req"
@@ -357,6 +358,8 @@ func (p *PostController) PostDeleteCommentOnPostByCommentID(ctx *fiber.Ctx) erro
 func (p *PostController) PostDeleteCommentsCommented(ctx *fiber.Ctx) error {
 
 	bodyData, err := common.RequestBodyValidator[req.DeleteCommentsRequest](ctx)
+
+	log.Println(bodyData)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())

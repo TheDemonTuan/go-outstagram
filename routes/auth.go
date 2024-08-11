@@ -17,6 +17,10 @@ func authRouter(r fiber.Router) {
 
 	authRoute.Add("POST", "login", authController.AuthLogin)
 	authRoute.Add("POST", "register", authController.AuthRegister)
+	authRoute.Add("POST", "otp/send", authController.AuthSendEmail)
+	authRoute.Add("PATCH", "otp/verify", authController.AuthVerifyEmail)
+	authRoute.Add("PUT", "reset/otp/send", authController.AuthSendEmailResetPassword)
+	authRoute.Add("PATCH", "reset/password", authController.AuthResetPassword)
 	authRoute.Add("DELETE", "logout", authController.AuthLogout)
 	authRoute.Add("POST", "oauth/login", authController.AuthOAuthLogin)
 	authRoute.Add("POST", "oauth/register", authController.AuthOAuthRegister)

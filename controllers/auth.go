@@ -86,6 +86,47 @@ func (c *AuthController) AuthRegister(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *AuthController) AuthSendEmail(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.AuthOTPSendEmail](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := c.authService.GenerateAndSaveOTP(bodyData); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusCreated, "Send email successfully", nil)
+}
+
+func (c *AuthController) AuthSendEmailResetPassword(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.AuthOTPSendEmailResetPassword](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := c.authService.GenerateAndSendPasswordResetOTP(bodyData); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusCreated, "Send email reset password successfully", nil)
+}
+
+func (c *AuthController) AuthVerifyEmail(ctx *fiber.Ctx) error {
+	bodyData, err := common.RequestBodyValidator[req.AuthOTPVerifyEmail](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := c.authService.VerifyOTP(bodyData); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Verify email successfully", nil)
+}
+
 func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
 	user, isOK := ctx.Locals(common.UserInfoLocalKey).(entity.User)
 	if !isOK {
@@ -95,6 +136,21 @@ func (c *AuthController) AuthVerify(ctx *fiber.Ctx) error {
 	return common.CreateResponse(ctx, fiber.StatusOK, "User is verified", fiber.Map{
 		"user": user,
 	})
+}
+
+func (c *AuthController) AuthResetPassword(ctx *fiber.Ctx) error {
+
+	bodyData, err := common.RequestBodyValidator[req.AuthResetPassword](ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := c.authService.AuthResetPasswordSaveToDB(ctx, bodyData); err != nil {
+		return err
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Reset password successfully", nil)
+
 }
 
 func (c *AuthController) AuthRefreshToken(ctx *fiber.Ctx) error {

@@ -311,22 +311,32 @@ func (u *UserService) UserMeEditEmailSaveToDB(ctx *fiber.Ctx, email string) erro
 	}
 
 	var existingUser entity.User
-	if err := common.DBConn.Where("email = ? and id != ?", email, userInfo.ID).First(&existingUser).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying email")
+	if err := common.DBConn.Where("email = ? and id != ?", email, userInfo.ID).First(&existingUser).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusInternalServerError, "Error while querying email")
+		}
+	} else {
+		return fiber.NewError(fiber.StatusBadRequest, "Email already exists")
 	}
 
-	if existingUser.Email != "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Email already exists")
+	var existingEmailOtp entity.Otp
+	if err := common.DBConn.Where("user_email = ?", userInfo.Email).First(&existingEmailOtp).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying otp email")
 	}
 
 	userInfo.Email = email
 
 	if err := common.DBConn.Save(&userInfo).Error; err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "error while updating user")
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while updating user")
+	}
+
+	existingEmailOtp.UserEmail = userInfo.Email
+
+	if err := common.DBConn.Save(&existingEmailOtp).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while updating otp email")
 	}
 
 	ctx.Locals(common.UserInfoLocalKey, userInfo)
-
 	return nil
 }
 
