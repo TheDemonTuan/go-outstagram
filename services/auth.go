@@ -98,6 +98,14 @@ func (s *AuthService) CreateUser(bodyData *req.AuthRegister) (entity.User, error
 		return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "User must be at least 13 years old")
 	}
 
+	var otpRecord entity.Otp
+	if err := common.DBConn.Where("user_email = ? AND is_used = ?", bodyData.Email, true).First(&otpRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.User{}, fiber.NewError(fiber.StatusBadRequest, "Email has not been verified")
+		}
+		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while checking OTP verification")
+	}
+
 	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(bodyData.Password), bcrypt.DefaultCost)
 	if hashedPasswordErr != nil {
 		return entity.User{}, fiber.NewError(fiber.StatusInternalServerError, "Error while hashing password")
