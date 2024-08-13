@@ -421,7 +421,7 @@ func (p *PostController) PostMeGetAllDeletedByUserID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Locals(common.UserIDLocalKey).(string)
 	var postRecords []entity.Post
 
-	if err := common.DBConn.Unscoped().Model(&entity.Post{}).Where("user_id = ? AND deleted_at IS NOT NULL", rawUserID).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
+	if err := common.DBConn.Unscoped().Model(&entity.Post{}).Where("user_id = ? AND deleted_at IS NOT NULL and active = ?", rawUserID, true).Preload("PostFiles").Preload("PostLikes").Preload("PostComments").Find(&postRecords).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "No deleted posts found")
 		}

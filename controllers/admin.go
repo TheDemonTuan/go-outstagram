@@ -30,11 +30,25 @@ func (a *AdminController) AdminDeletePostByPostID(ctx *fiber.Ctx) error {
 	rawUserID := ctx.Params("userID")
 	userID := uuid.MustParse(rawUserID)
 
+	var post entity.Post
+	if err := common.DBConn.Where("id = ?", postID).First(&post).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.NewError(fiber.StatusBadRequest, "Post not found")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while querying post")
+	}
+
 	if err := a.postService.PostDeleteByPostID(postID, userID); err != nil {
 		return err
 	}
 
-	return common.CreateResponse(ctx, fiber.StatusOK, "Post deleted", nil)
+	post.Active = false
+
+	if err := common.DBConn.Save(&post).Error; err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error while updating post to inactive")
+	}
+
+	return common.CreateResponse(ctx, fiber.StatusOK, "Post deleted and deactivated", nil)
 }
 
 func (a *AdminController) AdminBanUserByUserID(ctx *fiber.Ctx) error {
